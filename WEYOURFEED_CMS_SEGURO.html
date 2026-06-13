@@ -468,22 +468,39 @@
         // ============================================
         // CONFIGURACIÓN FIREBASE
         // ============================================
-        const firebaseConfig = {
-            // API Key: Restringida por dominio + API en Google Cloud Console
-            // Segura para hardcodear (restricciones de dominio + API específicas)
-            apiKey: "AIzaSyAm8oVA-8-WPrfuB_gbQ5OoL9OqvVAJhkw",
-            authDomain: "weyourfeed.firebaseapp.com",
-            projectId: "weyourfeed",
-            storageBucket: "weyourfeed.firebasestorage.app",
-            messagingSenderId: "108057920918",
-            appId: "1:108057920918:web:b2434484b00c4c6f0bc9b7",
-            measurementId: "G-79ZNK0SZHE"
-        };
+        let firebaseConfig = null;
+
+        // Cargar config desde endpoint seguro (Vercel Function)
+        async function loadFirebaseConfig() {
+            try {
+                const response = await fetch('/api/firebase-config');
+                if (!response.ok) throw new Error('Failed to load config');
+                firebaseConfig = await response.json();
+                console.log('✅ Firebase config cargado desde servidor seguro');
+            } catch (error) {
+                console.error('❌ Error cargando Firebase config:', error);
+            }
+        }
+
+        // Cargar config antes de inicializar Firebase
+        loadFirebaseConfig();
 
         let app, auth, db;
 
-        // Esperar a que Firebase SDK cargue (con retry)
-        function initializeFirebase() {
+        // Inicializar Firebase cuando config y SDK estén listos
+        async function initializeFirebase() {
+            // Esperar a que config esté cargada
+            let attempts = 0;
+            while (!firebaseConfig && attempts < 10) {
+                await new Promise(r => setTimeout(r, 500));
+                attempts++;
+            }
+
+            if (!firebaseConfig) {
+                console.error('❌ No se pudo cargar Firebase config');
+                return;
+            }
+
             if (typeof firebase !== 'undefined' && firebase.apps.length === 0) {
                 try {
                     app = firebase.initializeApp(firebaseConfig);
@@ -497,7 +514,7 @@
                 }
             } else if (typeof firebase === 'undefined') {
                 console.error('❌ Firebase SDK no disponible');
-                setTimeout(initializeFirebase, 500); // Reintentar en 500ms
+                setTimeout(initializeFirebase, 500);
             }
         }
 
