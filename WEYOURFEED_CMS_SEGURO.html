@@ -469,9 +469,9 @@
         // CONFIGURACIÓN FIREBASE
         // ============================================
         const firebaseConfig = {
-            // IMPORTANTE: La API Key se carga desde variables de entorno
-            // NO hardcódees la clave aquí. Usa Vercel Environment Variables
-            apiKey: window.FIREBASE_API_KEY || "CONFIGURE_IN_VERCEL_ENV",
+            // API Key: Restringida por dominio + API en Google Cloud Console
+            // Segura para hardcodear (restricciones de dominio + API específicas)
+            apiKey: "AIzaSyAm8oVA-8-WPrfuB_gbQ5OoL9OqvVAJhkw",
             authDomain: "weyourfeed.firebaseapp.com",
             projectId: "weyourfeed",
             storageBucket: "weyourfeed.firebasestorage.app",
