@@ -248,7 +248,10 @@
 
                         <div>
                             <label class="text-sm text-gray-400">Contraseña</label>
-                            <input type="password" id="loginPassword" placeholder="••••••••" required autocomplete="current-password">
+                            <div style="position: relative;">
+                                <input type="password" id="loginPassword" placeholder="••••••••" required autocomplete="current-password" style="width: 100%; padding-right: 40px;">
+                                <button type="button" onclick="togglePassword('loginPassword')" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #FF6600; cursor: pointer; font-size: 18px;">👁️</button>
+                            </div>
                         </div>
 
                         <div id="loginError" class="text-red-400 text-sm" style="display:none;"></div>
@@ -272,12 +275,18 @@
 
                         <div>
                             <label class="text-sm text-gray-400">Contraseña (mín 6 caracteres)</label>
-                            <input type="password" id="registerPassword" placeholder="••••••••" required autocomplete="new-password" minlength="6">
+                            <div style="position: relative;">
+                                <input type="password" id="registerPassword" placeholder="••••••••" required autocomplete="new-password" minlength="6" style="width: 100%; padding-right: 40px;">
+                                <button type="button" onclick="togglePassword('registerPassword')" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #FF6600; cursor: pointer; font-size: 18px;">👁️</button>
+                            </div>
                         </div>
 
                         <div>
                             <label class="text-sm text-gray-400">Confirmar contraseña</label>
-                            <input type="password" id="registerPasswordConfirm" placeholder="••••••••" required autocomplete="new-password">
+                            <div style="position: relative;">
+                                <input type="password" id="registerPasswordConfirm" placeholder="••••••••" required autocomplete="new-password" style="width: 100%; padding-right: 40px;">
+                                <button type="button" onclick="togglePassword('registerPasswordConfirm')" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #FF6600; cursor: pointer; font-size: 18px;">👁️</button>
+                            </div>
                         </div>
 
                         <div id="registerError" class="text-red-400 text-sm" style="display:none;"></div>
@@ -535,6 +544,15 @@
             document.getElementById(tabName).style.display = 'block';
             document.getElementById('loginError').style.display = 'none';
             document.getElementById('registerError').style.display = 'none';
+        }
+
+        function togglePassword(inputId) {
+            const input = document.getElementById(inputId);
+            if (input.type === 'password') {
+                input.type = 'text';
+            } else {
+                input.type = 'password';
+            }
         }
 
         async function googleSignIn() {
