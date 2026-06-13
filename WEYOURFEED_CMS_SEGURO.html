@@ -250,7 +250,7 @@
                             <label class="text-sm text-gray-400">Contraseña</label>
                             <div style="position: relative;">
                                 <input type="password" id="loginPassword" placeholder="••••••••" required autocomplete="current-password" style="width: 100%; padding-right: 40px;">
-                                <button type="button" onclick="togglePassword('loginPassword')" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #FF6600; cursor: pointer; font-size: 18px;">👁️</button>
+                                <button type="button" onclick="togglePassword('loginPassword')" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #FF6600; cursor: pointer; font-size: 18px;">🔍</button>
                             </div>
                         </div>
 
@@ -277,7 +277,7 @@
                             <label class="text-sm text-gray-400">Contraseña (mín 6 caracteres)</label>
                             <div style="position: relative;">
                                 <input type="password" id="registerPassword" placeholder="••••••••" required autocomplete="new-password" minlength="6" style="width: 100%; padding-right: 40px;">
-                                <button type="button" onclick="togglePassword('registerPassword')" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #FF6600; cursor: pointer; font-size: 18px;">👁️</button>
+                                <button type="button" onclick="togglePassword('registerPassword')" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #FF6600; cursor: pointer; font-size: 18px;">🔍</button>
                             </div>
                         </div>
 
@@ -285,7 +285,7 @@
                             <label class="text-sm text-gray-400">Confirmar contraseña</label>
                             <div style="position: relative;">
                                 <input type="password" id="registerPasswordConfirm" placeholder="••••••••" required autocomplete="new-password" style="width: 100%; padding-right: 40px;">
-                                <button type="button" onclick="togglePassword('registerPasswordConfirm')" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #FF6600; cursor: pointer; font-size: 18px;">👁️</button>
+                                <button type="button" onclick="togglePassword('registerPasswordConfirm')" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #FF6600; cursor: pointer; font-size: 18px;">🔍</button>
                             </div>
                         </div>
 
@@ -328,7 +328,7 @@
             <div class="flex gap-4 mb-6">
                 <button class="btn-primary" onclick="openProductModal()">➕ Nuevo Producto</button>
                 <button class="btn-primary" onclick="openCategoryModal()">🏷️ Nueva Categoría</button>
-                <button class="btn-secondary" onclick="viewPublic()">👁️ Ver como Cliente</button>
+                <button class="btn-secondary" onclick="viewPublic()">🔍 Ver como Cliente</button>
             </div>
 
             <div class="glass p-6 mb-6">
@@ -482,17 +482,31 @@
 
         let app, auth, db;
 
-        // Esperar a que Firebase SDK cargue
-        document.addEventListener('DOMContentLoaded', function() {
-            if (typeof firebase !== 'undefined') {
-                app = firebase.initializeApp(firebaseConfig);
-                auth = firebase.auth();
-                db = firebase.firestore();
-                console.log('✅ Firebase inicializado correctamente');
-            } else {
-                console.error('❌ Firebase SDK no cargó');
+        // Esperar a que Firebase SDK cargue (con retry)
+        function initializeFirebase() {
+            if (typeof firebase !== 'undefined' && firebase.apps.length === 0) {
+                try {
+                    app = firebase.initializeApp(firebaseConfig);
+                    auth = firebase.auth();
+                    db = firebase.firestore();
+                    console.log('✅ Firebase inicializado correctamente');
+                    console.log('Auth:', auth);
+                    console.log('Firestore:', db);
+                } catch (error) {
+                    console.error('❌ Error inicializando Firebase:', error);
+                }
+            } else if (typeof firebase === 'undefined') {
+                console.error('❌ Firebase SDK no disponible');
+                setTimeout(initializeFirebase, 500); // Reintentar en 500ms
             }
-        });
+        }
+
+        // Inicializar cuando el documento esté listo
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeFirebase);
+        } else {
+            initializeFirebase();
+        }
 
         // ============================================
         // ESTADO GLOBAL
