@@ -1065,8 +1065,20 @@
         // ============================================
         // INICIALIZACIÓN
         // ============================================
-        window.addEventListener('DOMContentLoaded', () => {
+        window.addEventListener('DOMContentLoaded', async () => {
             setInterval(updateLoginUI, 1000);
+
+            // Esperar a que Firebase esté listo
+            let attempts = 0;
+            while (!auth && attempts < 20) {
+                await new Promise(r => setTimeout(r, 250));
+                attempts++;
+            }
+
+            if (!auth) {
+                console.error('❌ Firebase Auth no se inicializó');
+                return;
+            }
 
             auth.onAuthStateChanged(user => {
                 if (user && !appState.user) {
