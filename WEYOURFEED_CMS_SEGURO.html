@@ -330,6 +330,7 @@
                 <button class="btn-primary" onclick="openCategoryModal()">🏷️ Nueva Categoría</button>
                 <button class="btn-primary" onclick="document.getElementById('csvUpload').click()" id="csvBtn">📤 Cargar CSV</button>
                 <input type="file" id="csvUpload" accept=".csv" style="display:none;" onchange="handleCSVUpload(event)">
+                <button class="btn-primary" onclick="loadImagesFromJSON()" id="loadImagesBtn">📸 Cargar Imágenes</button>
                 <button class="btn-secondary" onclick="viewPublic()">🔍 Ver como Cliente</button>
             </div>
 
@@ -437,7 +438,7 @@
                     <button type="button" onclick="closeProductModal()" class="btn-secondary flex-1">Cancelar</button>
                 </div>
 
-                <button type="button" id="deleteProductBtn" class="w-full btn-secondary text-red-500" style="display:none;" onclick="deleteProduct()">
+                <button type="button" id="deleteProductBtn" class="w-full btn-secondary text-red-500" style="display:none;" onclick="deleteProductFromModal()">
                     🗑️ Eliminar
                 </button>
             </form>
@@ -946,7 +947,7 @@
             }
         }
 
-        async function deleteProduct() {
+        async function deleteProductFromModal() {
             if (!confirm('⚠️ ¿Eliminar este producto?')) return;
 
             try {
@@ -956,6 +957,20 @@
                 await initAdmin();
                 logAudit('product_deleted', { id: appState.editingProductId });
             } catch (error) {
+                showNotification('❌ Error eliminando producto', 'error');
+            }
+        }
+
+        async function deleteProduct(id, nombre) {
+            if (!confirm(`⚠️ ¿Eliminar "${nombre}"?`)) return;
+
+            try {
+                await db.collection('productos').doc(id).delete();
+                showNotification(`✅ "${nombre}" eliminado`, 'success');
+                await initAdmin();
+                logAudit('product_deleted', { id: id, nombre: nombre });
+            } catch (error) {
+                console.error('Error:', error);
                 showNotification('❌ Error eliminando producto', 'error');
             }
         }
@@ -996,7 +1011,10 @@
                             <p class="font-bold text-sm mb-2">${sanitizeHTML(p.nombre)}</p>
                             <p class="text-orange-600 font-bold mb-2">$${p.precio}</p>
                             <p class="text-gray-400 text-xs mb-2">${catName} | Stock: ${p.stock}</p>
-                            <button class="btn-secondary w-full text-xs" onclick="editProduct('${p.id}')">✏️ Editar</button>
+                            <div class="flex gap-2">
+                                <button class="btn-secondary flex-1 text-xs" onclick="editProduct('${p.id}')">✏️ Editar</button>
+                                <button class="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded text-xs" onclick="deleteProduct('${p.id}', '${p.nombre.replace(/'/g, "\\'")}')">❌</button>
+                            </div>
                         </div>
                     </div>
                 `;
@@ -1192,6 +1210,77 @@
 
             } catch (error) {
                 console.error('Error importando catálogo:', error);
+                showNotification(`❌ Error: ${error.message}`, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
+        }
+
+        // Cargar imágenes desde imagenes_68.json
+        async function loadImagesFromJSON() {
+            const btn = document.getElementById('loadImagesBtn');
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = '⏳ Cargando imágenes...';
+
+            try {
+                // Fetch al JSON con imágenes
+                const response = await fetch('/imagenes_68.json');
+                if (!response.ok) throw new Error('No se pudo cargar el archivo de imágenes');
+
+                const imagenes = await response.json();
+                if (imagenes.length === 0) {
+                    throw new Error('No hay imágenes en el archivo');
+                }
+
+                console.log(`📸 Iniciando carga de ${imagenes.length} imágenes...`);
+
+                // Obtener todos los productos actuales
+                const productsSnapshot = await db.collection('productos').get();
+                const productsByName = {};
+
+                productsSnapshot.forEach(doc => {
+                    const data = doc.data();
+                    productsByName[data.nombre] = doc.id;
+                });
+
+                // Para cada imagen, buscar el producto y actualizar
+                let updated = 0;
+                let notFound = 0;
+
+                for (const img of imagenes) {
+                    try {
+                        const docId = productsByName[img.nombre];
+
+                        if (!docId) {
+                            console.warn(`⚠️ Producto no encontrado: ${img.nombre}`);
+                            notFound++;
+                            continue;
+                        }
+
+                        // Actualizar documento con imagen
+                        await db.collection('productos').doc(docId).update({
+                            imagenBase64: img.imagen
+                        });
+
+                        updated++;
+                        console.log(`✅ Actualizado: ${img.nombre}`);
+
+                    } catch (e) {
+                        console.warn(`Error actualizando ${img.nombre}:`, e);
+                        notFound++;
+                    }
+                }
+
+                showNotification(`✅ Imágenes cargadas: ${updated}/${imagenes.length}`, 'success');
+                logAudit('images_loaded', { updated: updated, notFound: notFound });
+
+                // Recargar
+                await initAdmin();
+
+            } catch (error) {
+                console.error('Error cargando imágenes:', error);
                 showNotification(`❌ Error: ${error.message}`, 'error');
             } finally {
                 btn.disabled = false;
