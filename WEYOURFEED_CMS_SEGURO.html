@@ -1105,10 +1105,16 @@
                 let imported = 0;
                 for (const prod of productos) {
                     try {
+                        const costo = parseFloat(prod.costo) || 0;
+                        const pvp = parseFloat(prod.pvp) || 0;
+                        const ganancia = pvp - costo;
+
                         await db.collection('productos').add({
                             nombre: prod.nombre || 'Sin nombre',
                             descripcion: prod.descripcion || '',
-                            precio: parseFloat(prod.precio) || 0,
+                            costo: costo,
+                            pvp: pvp,
+                            ganancia: ganancia,
                             categoria: prod.categoria || 'Sin categoría',
                             imagen: prod.imagen || '',
                             stock: parseInt(prod.stock) || 0,
