@@ -328,6 +328,8 @@
             <div class="flex gap-4 mb-6">
                 <button class="btn-primary" onclick="openProductModal()">➕ Nuevo Producto</button>
                 <button class="btn-primary" onclick="openCategoryModal()">🏷️ Nueva Categoría</button>
+                <button class="btn-primary" onclick="document.getElementById('csvUpload').click()" id="csvBtn">📤 Cargar CSV</button>
+                <input type="file" id="csvUpload" accept=".csv" style="display:none;" onchange="handleCSVUpload(event)">
                 <button class="btn-secondary" onclick="viewPublic()">🔍 Ver como Cliente</button>
             </div>
 
@@ -1052,6 +1054,143 @@
 
         function backToAdmin() {
             showPage('adminPage');
+        }
+
+        // Procesar CSV Upload
+        async function handleCSVUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const btn = document.getElementById('csvBtn');
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = '⏳ Procesando...';
+
+            try {
+                const text = await file.text();
+                const lines = text.trim().split('\n');
+
+                if (lines.length < 2) {
+                    throw new Error('CSV debe tener encabezados y al menos 1 producto');
+                }
+
+                // Parsear encabezados
+                const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+                const requiredCols = ['nombre', 'pvp'];
+                const missingCols = requiredCols.filter(col => !headers.includes(col));
+
+                if (missingCols.length > 0) {
+                    throw new Error(`Faltan columnas requeridas: ${missingCols.join(', ')}`);
+                }
+
+                // Parsear productos
+                const productos = [];
+                for (let i = 1; i < lines.length; i++) {
+                    const values = lines[i].split(',').map(v => v.trim());
+                    if (values[0] === '') continue; // Skip empty lines
+
+                    const producto = {};
+                    headers.forEach((header, idx) => {
+                        producto[header] = values[idx] || '';
+                    });
+
+                    productos.push(producto);
+                }
+
+                if (productos.length === 0) {
+                    throw new Error('No hay productos válidos en el CSV');
+                }
+
+                // Cargar a Firestore
+                let imported = 0;
+                for (const prod of productos) {
+                    try {
+                        await db.collection('productos').add({
+                            nombre: prod.nombre || 'Sin nombre',
+                            descripcion: prod.descripcion || '',
+                            precio: parseFloat(prod.precio) || 0,
+                            categoria: prod.categoria || 'Sin categoría',
+                            imagen: prod.imagen || '',
+                            stock: parseInt(prod.stock) || 0,
+                            activo: true,
+                            creado: new Date()
+                        });
+                        imported++;
+                    } catch (e) {
+                        console.warn(`Error: ${prod.nombre}`, e);
+                    }
+                }
+
+                showNotification(`✅ Importados ${imported}/${productos.length} productos`, 'success');
+                logAudit('csv_import', { count: imported, file: file.name });
+
+                // Recargar lista
+                await initAdmin();
+
+                // Reset input
+                event.target.value = '';
+
+            } catch (error) {
+                console.error('Error procesando CSV:', error);
+                showNotification(`❌ Error: ${error.message}`, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
+        }
+
+        // Importar catálogo desde JSON
+        async function importCatalog() {
+            const btn = document.getElementById('importBtn');
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = '⏳ Importando...';
+
+            try {
+                // Fetch al JSON
+                const response = await fetch('/catalogo_procesado.json');
+                if (!response.ok) throw new Error('No se pudo cargar el catálogo');
+
+                const data = await response.json();
+                const productos = data.productos || [];
+
+                if (productos.length === 0) {
+                    throw new Error('No hay productos en el catálogo');
+                }
+
+                // Guardar en Firestore
+                let imported = 0;
+                for (const prod of productos) {
+                    try {
+                        await db.collection('productos').add({
+                            nombre: prod.nombre || 'Sin nombre',
+                            descripcion: prod.descripcion || '',
+                            precio: parseFloat(prod.precio) || 0,
+                            categoria: prod.categoria || 'Sin categoría',
+                            imagen: prod.imagen || '',
+                            stock: parseInt(prod.stock) || 0,
+                            activo: true,
+                            creado: new Date()
+                        });
+                        imported++;
+                    } catch (e) {
+                        console.warn(`Error importando ${prod.nombre}:`, e);
+                    }
+                }
+
+                showNotification(`✅ Importados ${imported}/${productos.length} productos`, 'success');
+                logAudit('import_catalog', { count: imported });
+
+                // Recargar lista
+                await initAdmin();
+
+            } catch (error) {
+                console.error('Error importando catálogo:', error);
+                showNotification(`❌ Error: ${error.message}`, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
         }
 
         // ============================================
