@@ -371,7 +371,8 @@
                 <button class="btn-primary" onclick="openCategoryModal()">🏷️ Nueva Categoría</button>
                 <button class="btn-primary" onclick="openCSVDialog()" id="csvBtn">📤 Cargar CSV</button>
                 <input type="file" id="csvUpload" accept=".csv" style="display:none;" onchange="handleCSVUpload(event)">
-                <button class="btn-primary" onclick="loadImagesFromJSON()" id="loadImagesBtn">📸 Cargar Imágenes</button>
+                <button class="btn-primary" onclick="openImageDialog()" id="loadImagesBtn">📸 Cargar Imágenes</button>
+                <input type="file" id="imageUpload" accept=".json" style="display:none;" onchange="handleImageUpload(event)">
                 <button class="btn-secondary" onclick="viewPublic()">🔍 Ver como Cliente</button>
             </div>
 
@@ -1169,6 +1170,11 @@
             input.click();
         }
 
+        function openImageDialog() {
+            const input = document.getElementById('imageUpload');
+            input.click();
+        }
+
         // Procesar CSV Upload
         async function handleCSVUpload(event) {
             const file = event.target.files[0];
@@ -1427,6 +1433,132 @@
 
             } catch (error) {
                 console.error('Error cargando imágenes:', error);
+                showNotification(`❌ Error: ${error.message}`, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
+        }
+
+        // Cargar imágenes desde archivo JSON seleccionado
+        async function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const btn = document.getElementById('loadImagesBtn');
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = '⏳ Cargando imágenes...';
+
+            try {
+                const text = await file.text();
+                const imagenes = JSON.parse(text);
+
+                if (!Array.isArray(imagenes) || imagenes.length === 0) {
+                    throw new Error('El archivo debe ser un JSON válido con un array de imágenes');
+                }
+
+                console.log(`📸 Iniciando carga de ${imagenes.length} imágenes desde ${file.name}...`);
+
+                // Obtener todos los productos actuales
+                const productsSnapshot = await db.collection('productos').get();
+                const productsByName = {};
+                const allProducts = [];
+
+                productsSnapshot.forEach(doc => {
+                    const data = doc.data();
+                    productsByName[data.nombre] = doc.id;
+                    allProducts.push({ id: doc.id, nombre: data.nombre });
+                });
+
+                // Función para buscar productos similares
+                function findSimilarProduct(imageName, maxDistance = 3) {
+                    let bestMatch = null;
+                    let bestDistance = maxDistance;
+
+                    for (const prod of allProducts) {
+                        const distance = levenshteinDistance(imageName.toUpperCase(), prod.nombre.toUpperCase());
+                        if (distance < bestDistance) {
+                            bestDistance = distance;
+                            bestMatch = prod;
+                        }
+                    }
+                    return bestMatch;
+                }
+
+                // Función de distancia de Levenshtein
+                function levenshteinDistance(a, b) {
+                    if (a.length === 0) return b.length;
+                    if (b.length === 0) return a.length;
+
+                    const matrix = [];
+                    for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+                    for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+
+                    for (let i = 1; i <= b.length; i++) {
+                        for (let j = 1; j <= a.length; j++) {
+                            if (b.charAt(i - 1) === a.charAt(j - 1)) {
+                                matrix[i][j] = matrix[i - 1][j - 1];
+                            } else {
+                                matrix[i][j] = Math.min(
+                                    matrix[i - 1][j - 1] + 1,
+                                    matrix[i][j - 1] + 1,
+                                    matrix[i - 1][j] + 1
+                                );
+                            }
+                        }
+                    }
+                    return matrix[b.length][a.length];
+                }
+
+                // Para cada imagen, buscar el producto y actualizar
+                let updated = 0;
+                let notFound = 0;
+
+                for (const img of imagenes) {
+                    try {
+                        let docId = productsByName[img.nombre];
+
+                        // Si no encuentra coincidencia exacta, buscar similar
+                        if (!docId) {
+                            const similar = findSimilarProduct(img.nombre);
+                            if (similar) {
+                                docId = similar.id;
+                                console.log(`🔍 Encontrado similar: '${img.nombre}' → '${similar.nombre}'`);
+                            }
+                        }
+
+                        if (!docId) {
+                            console.warn(`⚠️ Producto no encontrado: ${img.nombre}`);
+                            notFound++;
+                            continue;
+                        }
+
+                        // Actualizar documento con imagen
+                        await db.collection('productos').doc(docId).update({
+                            imagenBase64: img.imagen
+                        });
+
+                        updated++;
+                        console.log(`✅ Actualizado: ${img.nombre}`);
+
+                    } catch (e) {
+                        console.warn(`Error actualizando ${img.nombre}:`, e);
+                        notFound++;
+                    }
+                }
+
+                showNotification(`✅ Imágenes cargadas: ${updated}/${imagenes.length}`, 'success');
+                logAudit('images_loaded', { updated: updated, notFound: notFound, file: file.name });
+
+                // Recargar lista
+                await initAdmin();
+
+                // Reset input
+                event.target.value = '';
+
+            } catch (error) {
+                console.error('Error procesando archivo de imágenes:', error);
                 showNotification(`❌ Error: ${error.message}`, 'error');
             } finally {
                 btn.disabled = false;
