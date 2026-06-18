@@ -1334,11 +1334,53 @@
                 // Obtener todos los productos actuales
                 const productsSnapshot = await db.collection('productos').get();
                 const productsByName = {};
+                const allProducts = [];
 
                 productsSnapshot.forEach(doc => {
                     const data = doc.data();
                     productsByName[data.nombre] = doc.id;
+                    allProducts.push({ id: doc.id, nombre: data.nombre });
                 });
+
+                // Función para buscar productos similares
+                function findSimilarProduct(imageName, maxDistance = 3) {
+                    let bestMatch = null;
+                    let bestDistance = maxDistance;
+
+                    for (const prod of allProducts) {
+                        const distance = levenshteinDistance(imageName.toUpperCase(), prod.nombre.toUpperCase());
+                        if (distance < bestDistance) {
+                            bestDistance = distance;
+                            bestMatch = prod;
+                        }
+                    }
+                    return bestMatch;
+                }
+
+                // Función de distancia de Levenshtein
+                function levenshteinDistance(a, b) {
+                    if (a.length === 0) return b.length;
+                    if (b.length === 0) return a.length;
+
+                    const matrix = [];
+                    for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+                    for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+
+                    for (let i = 1; i <= b.length; i++) {
+                        for (let j = 1; j <= a.length; j++) {
+                            if (b.charAt(i - 1) === a.charAt(j - 1)) {
+                                matrix[i][j] = matrix[i - 1][j - 1];
+                            } else {
+                                matrix[i][j] = Math.min(
+                                    matrix[i - 1][j - 1] + 1,
+                                    matrix[i][j - 1] + 1,
+                                    matrix[i - 1][j] + 1
+                                );
+                            }
+                        }
+                    }
+                    return matrix[b.length][a.length];
+                }
 
                 // Para cada imagen, buscar el producto y actualizar
                 let updated = 0;
@@ -1346,7 +1388,16 @@
 
                 for (const img of imagenes) {
                     try {
-                        const docId = productsByName[img.nombre];
+                        let docId = productsByName[img.nombre];
+
+                        // Si no encuentra coincidencia exacta, buscar similar
+                        if (!docId) {
+                            const similar = findSimilarProduct(img.nombre);
+                            if (similar) {
+                                docId = similar.id;
+                                console.log(`🔍 Encontrado similar: '${img.nombre}' → '${similar.nombre}'`);
+                            }
+                        }
 
                         if (!docId) {
                             console.warn(`⚠️ Producto no encontrado: ${img.nombre}`);
