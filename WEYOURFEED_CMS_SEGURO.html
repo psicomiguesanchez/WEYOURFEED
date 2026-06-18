@@ -1332,8 +1332,7 @@
                 console.log(`📸 Iniciando carga de ${imagenes.length} imágenes...`);
 
                 // Obtener todos los productos actuales
-                // Timestamp: Sun Jun 14 13:26:55 UTC 2026
-n('productos').get();
+                const productsSnapshot = await db.collection('productos').get();
                 const productsByName = {};
 
                 productsSnapshot.forEach(doc => {
