@@ -100,6 +100,47 @@
             color: #000000;
         }
 
+        .btn-subtle {
+            background: transparent;
+            border: none;
+            color: #FF6600;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            opacity: 0.7;
+        }
+
+        .btn-subtle:hover {
+            opacity: 1;
+            background: rgba(255, 102, 0, 0.1);
+            transform: scale(1.1);
+        }
+
+        /* Grid layout - responsive columns */
+        .grid-cols-4 {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 24px;
+        }
+
+        .grid-cols-6 {
+            display: grid;
+            grid-template-columns: repeat(6, minmax(0, 1fr));
+            gap: 16px;
+        }
+
+        /* Drag and drop styles */
+        .product-card.dragging {
+            opacity: 0.5;
+        }
+
+        .product-card.drag-over {
+            border: 2px dashed #FF6600;
+            transform: scale(0.95);
+        }
+
         .notification {
             position: fixed;
             top: 20px;
@@ -328,7 +369,7 @@
             <div class="flex gap-4 mb-6">
                 <button class="btn-primary" onclick="openProductModal()">➕ Nuevo Producto</button>
                 <button class="btn-primary" onclick="openCategoryModal()">🏷️ Nueva Categoría</button>
-                <button class="btn-primary" onclick="document.getElementById('csvUpload').click()" id="csvBtn">📤 Cargar CSV</button>
+                <button class="btn-primary" onclick="openCSVDialog()" id="csvBtn">📤 Cargar CSV</button>
                 <input type="file" id="csvUpload" accept=".csv" style="display:none;" onchange="handleCSVUpload(event)">
                 <button class="btn-primary" onclick="loadImagesFromJSON()" id="loadImagesBtn">📸 Cargar Imágenes</button>
                 <button class="btn-secondary" onclick="viewPublic()">🔍 Ver como Cliente</button>
@@ -340,6 +381,11 @@
                     <input type="text" id="adminSearch" placeholder="Buscar producto..." class="flex-1" oninput="filterProducts()">
                     <select id="adminCategory" class="w-48" onchange="filterProducts()">
                         <option value="">Todas las categorías</option>
+                    </select>
+                    <select id="columnSelector" class="w-32" onchange="changeColumns()">
+                        <option value="3">3 columnas</option>
+                        <option value="4">4 columnas</option>
+                        <option value="6">6 columnas</option>
                     </select>
                 </div>
             </div>
@@ -422,9 +468,12 @@
 
                 <div>
                     <label class="text-sm text-gray-400">Categoría *</label>
-                    <select id="productCategory" required>
-                        <option value="">Seleccionar...</option>
-                    </select>
+                    <div class="flex gap-2">
+                        <select id="productCategory" required class="flex-1">
+                            <option value="">Seleccionar...</option>
+                        </select>
+                        <button type="button" onclick="quickAddCategory()" class="btn-subtle text-sm">➕</button>
+                    </div>
                 </div>
 
                 <div>
@@ -778,6 +827,43 @@
             document.getElementById('categoryModal').classList.remove('active');
         }
 
+        // Crear categoría rápido desde modal de producto
+        async function quickAddCategory() {
+            const name = prompt('📁 Nombre de la nueva categoría:');
+
+            if (!name || name.length < 2) {
+                showNotification('❌ Nombre inválido', 'error');
+                return;
+            }
+
+            if (name.length > 100) {
+                showNotification('❌ Nombre muy largo', 'error');
+                return;
+            }
+
+            try {
+                const categoryId = name.toLowerCase().replace(/\s+/g, '-');
+                await db.collection('categorias').doc(categoryId).set({
+                    nombre: sanitizeHTML(name),
+                    createdAt: new Date().toISOString(),
+                    createdBy: appState.user.email
+                });
+
+                showNotification(`✅ Categoría "${name}" creada`, 'success');
+                logAudit('category_created_quick', { name: name });
+
+                // Recargar selects
+                updateCategorySelects();
+
+                // Auto-seleccionar la nueva categoría
+                document.getElementById('productCategory').value = categoryId;
+
+            } catch (error) {
+                console.error('Error:', error);
+                showNotification('❌ Error creando categoría', 'error');
+            }
+        }
+
         async function saveCategory(event) {
             event.preventDefault();
 
@@ -1000,10 +1086,10 @@
                 return;
             }
 
-            grid.innerHTML = appState.filteredProducts.map(p => {
+            grid.innerHTML = appState.filteredProducts.map((p, idx) => {
                 const catName = appState.categories.find(c => c.id === p.categoriaId)?.nombre || 'Sin categoría';
                 return `
-                    <div class="product-card">
+                    <div class="product-card" data-id="${p.id}" data-index="${idx}">
                         <div style="height: 200px; background: #000; display: flex; align-items: center; justify-content: center;">
                             ${p.imagenBase64 ? `<img src="${p.imagenBase64}" alt="${sanitizeHTML(p.nombre)}" style="max-height: 100%; max-width: 100%;">` : '<p class="text-gray-600">Sin imagen</p>'}
                         </div>
@@ -1019,6 +1105,9 @@
                     </div>
                 `;
             }).join('');
+
+            // Actualizar clases del grid
+            updateGridLayout();
         }
 
         function filterClientProducts() {
@@ -1072,6 +1161,12 @@
 
         function backToAdmin() {
             showPage('adminPage');
+        }
+
+        // Abrir diálogo de selección de CSV
+        function openCSVDialog() {
+            const input = document.getElementById('csvUpload');
+            input.click();
         }
 
         // Procesar CSV Upload
@@ -1237,7 +1332,8 @@
                 console.log(`📸 Iniciando carga de ${imagenes.length} imágenes...`);
 
                 // Obtener todos los productos actuales
-                const productsSnapshot = await db.collection('productos').get();
+                // Timestamp: Sun Jun 14 13:26:55 UTC 2026
+n('productos').get();
                 const productsByName = {};
 
                 productsSnapshot.forEach(doc => {
@@ -1286,6 +1382,39 @@
                 btn.disabled = false;
                 btn.textContent = originalText;
             }
+        }
+
+        // ============================================
+        // CAMBIAR LAYOUT DE COLUMNAS
+        // ============================================
+        // Cambiar número de columnas
+        function changeColumns() {
+            const cols = document.getElementById('columnSelector').value;
+            localStorage.setItem('adminGridColumns', cols);
+            updateGridLayout();
+        }
+
+        function updateGridLayout() {
+            const grid = document.getElementById('adminGrid');
+            const cols = localStorage.getItem('adminGridColumns') || '3';
+
+            // Remover clases anteriores
+            grid.className = grid.className.replace(/grid-cols-\d+/g, '');
+
+            // Agregar nueva clase
+            if (cols === '4') {
+                grid.classList.add('grid-cols-4');
+                grid.classList.remove('grid', 'grid-cols-1', 'md:grid-cols-2', 'lg:grid-cols-3', 'grid-cols-6');
+            } else if (cols === '6') {
+                grid.classList.add('grid-cols-6');
+                grid.classList.remove('grid', 'grid-cols-1', 'md:grid-cols-2', 'lg:grid-cols-3', 'grid-cols-4');
+            } else {
+                // Default 3 columnas
+                grid.className = 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6';
+            }
+
+            // Sincronizar selector
+            document.getElementById('columnSelector').value = cols;
         }
 
         // ============================================
