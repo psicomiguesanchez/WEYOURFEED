@@ -209,18 +209,34 @@
         }
 
         input, textarea, select {
-            background: rgba(255, 255, 255, 0.1) !important;
-            border: 1px solid rgba(255, 102, 0, 0.3) !important;
-            color: #FFFFFF !important;
+            background: rgba(20, 20, 20, 0.9) !important;
+            border: 2px solid #FF6600 !important;
+            color: #FF9933 !important;
             padding: 10px 12px;
-            border-radius: 6px;
+            border-radius: 8px;
             margin: 8px 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+            font-weight: 500 !important;
+            font-size: 15px !important;
+            letter-spacing: 0.5px;
         }
 
         input:focus, textarea:focus, select:focus {
             outline: none;
-            border-color: #FF6600 !important;
-            box-shadow: 0 0 15px rgba(255, 102, 0, 0.2) !important;
+            border-color: #FFB347 !important;
+            box-shadow: 0 0 20px rgba(255, 153, 51, 0.4) !important;
+            background: rgba(30, 30, 30, 0.95) !important;
+        }
+
+        select option {
+            background: #1a1a1a !important;
+            color: #FF9933 !important;
+            font-weight: 500 !important;
+        }
+
+        select option:checked {
+            background: linear-gradient(#FF6600, #FF6600) !important;
+            color: #FFFFFF !important;
         }
 
         .grid-products {
@@ -421,9 +437,12 @@
             <p class="text-gray-400 mb-6">Descubre nuestros productos</p>
 
             <div class="flex gap-4 mb-6">
-                <input type="text" id="clientSearch" placeholder="Buscar..." class="flex-1" oninput="filterClientProducts()">
-                <select id="clientCategory" class="w-48" onchange="filterClientProducts()">
+                <input type="text" id="clientSearch" placeholder="Buscar por nombre..." class="flex-1" oninput="filterClientProducts()">
+                <select id="clientCategory" class="w-44" onchange="filterClientProducts()">
                     <option value="">Todas las categorías</option>
+                </select>
+                <select id="clientBrand" class="w-44" onchange="filterClientProducts()">
+                    <option value="">Todas las marcas</option>
                 </select>
             </div>
 
@@ -809,6 +828,7 @@
                 });
 
                 filterProducts();
+                updateBrandSelect(); // Poblar dropdown de marcas
                 logAudit('admin_loaded', { products: appState.products.length });
             } catch (error) {
                 console.error('Error cargando datos:', error);
@@ -1090,9 +1110,9 @@
             grid.innerHTML = appState.filteredProducts.map((p, idx) => {
                 const catName = appState.categories.find(c => c.id === p.categoriaId)?.nombre || 'Sin categoría';
                 return `
-                    <div class="product-card" data-id="${p.id}" data-index="${idx}">
+                    <div class="product-card" data-id="${p.id}" data-index="${idx}" draggable="true" style="cursor: grab;">
                         <div style="height: 200px; background: #000; display: flex; align-items: center; justify-content: center;">
-                            ${p.imagenBase64 ? `<img src="${p.imagenBase64}" alt="${sanitizeHTML(p.nombre)}" style="max-height: 100%; max-width: 100%;">` : '<p class="text-gray-600">Sin imagen</p>'}
+                            ${p.imagenBase64 ? `<img src="${p.imagenBase64}" alt="${sanitizeHTML(p.nombre)}" style="max-height: 100%; max-width: 100%;" draggable="false">` : '<p class="text-gray-600">Sin imagen</p>'}
                         </div>
                         <div class="p-4">
                             <p class="font-bold text-sm mb-2">${sanitizeHTML(p.nombre)}</p>
@@ -1109,19 +1129,51 @@
 
             // Actualizar clases del grid
             updateGridLayout();
+
+            // Agregar event listeners para drag & drop
+            setupDragAndDrop();
         }
 
         function filterClientProducts() {
             const search = document.getElementById('clientSearch').value.toLowerCase();
             const category = document.getElementById('clientCategory').value;
+            const brand = document.getElementById('clientBrand').value;
 
             const filtered = appState.products.filter(p => {
                 const matchSearch = (p.nombre || '').toLowerCase().includes(search);
                 const matchCategory = !category || p.categoriaId === category;
-                return matchSearch && matchCategory;
+                const productBrand = extractBrand(p.nombre);
+                const matchBrand = !brand || productBrand === brand;
+                return matchSearch && matchCategory && matchBrand;
             });
 
             renderClientProducts(filtered);
+        }
+
+        // Extraer marca del nombre del producto
+        function extractBrand(nombre) {
+            if (!nombre) return '';
+            const palabras = nombre.trim().split(' ');
+            return palabras[0]; // Primera palabra es la marca
+        }
+
+        // Poblar dropdown de marcas
+        function updateBrandSelect() {
+            const brands = new Set();
+            appState.products.forEach(p => {
+                const brand = extractBrand(p.nombre);
+                if (brand) brands.add(brand);
+            });
+
+            const select = document.getElementById('clientBrand');
+            const currentValue = select.value;
+
+            const brandOptions = Array.from(brands).sort().map(brand =>
+                `<option value="${brand}">${brand}</option>`
+            ).join('');
+
+            select.innerHTML = '<option value="">Todas las marcas</option>' + brandOptions;
+            select.value = currentValue;
         }
 
         function renderClientProducts(products) {
@@ -1157,6 +1209,7 @@
 
         function viewPublic() {
             showPage('clientPage');
+            updateBrandSelect();
             filterClientProducts();
         }
 
@@ -1635,6 +1688,101 @@
                 }
             });
         });
+
+        // ============================================
+        // DRAG & DROP - REORDENAR PRODUCTOS
+        // ============================================
+        let draggedElement = null;
+        let draggedFromIndex = null;
+
+        function setupDragAndDrop() {
+            const cards = document.querySelectorAll('.product-card');
+
+            cards.forEach(card => {
+                card.addEventListener('dragstart', handleDragStart);
+                card.addEventListener('dragover', handleDragOver);
+                card.addEventListener('drop', handleDrop);
+                card.addEventListener('dragleave', handleDragLeave);
+                card.addEventListener('dragend', handleDragEnd);
+            });
+        }
+
+        function handleDragStart(e) {
+            draggedElement = this;
+            draggedFromIndex = parseInt(this.dataset.index);
+            this.style.opacity = '0.5';
+            this.style.transform = 'scale(0.95)';
+            e.dataTransfer.effectAllowed = 'move';
+        }
+
+        function handleDragOver(e) {
+            if (e.preventDefault) e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            this.style.borderTop = '3px solid #ff9800';
+            return false;
+        }
+
+        function handleDragLeave(e) {
+            this.style.borderTop = 'none';
+        }
+
+        function handleDrop(e) {
+            if (e.stopPropagation) e.stopPropagation();
+
+            this.style.borderTop = 'none';
+
+            if (draggedElement !== this) {
+                const draggedToIndex = parseInt(this.dataset.index);
+
+                // Intercambiar productos en la lista
+                if (draggedFromIndex < draggedToIndex) {
+                    [appState.filteredProducts[draggedFromIndex], appState.filteredProducts[draggedToIndex]] =
+                    [appState.filteredProducts[draggedToIndex], appState.filteredProducts[draggedFromIndex]];
+                } else {
+                    [appState.filteredProducts[draggedFromIndex], appState.filteredProducts[draggedToIndex]] =
+                    [appState.filteredProducts[draggedToIndex], appState.filteredProducts[draggedFromIndex]];
+                }
+
+                // Re-renderizar
+                renderAdminProducts();
+
+                // Guardar orden en Firestore
+                saveProductOrder();
+
+                showNotification('✅ Productos reordenados', 'success');
+            }
+
+            return false;
+        }
+
+        function handleDragEnd(e) {
+            this.style.opacity = '1';
+            this.style.transform = 'scale(1)';
+            this.style.borderTop = 'none';
+            draggedElement = null;
+            draggedFromIndex = null;
+        }
+
+        // Guardar orden en Firestore
+        async function saveProductOrder() {
+            try {
+                const batch = db.batch();
+
+                appState.filteredProducts.forEach((product, index) => {
+                    const docRef = db.collection('productos').doc(product.id);
+                    batch.update(docRef, { orden: index });
+                });
+
+                await batch.commit();
+                console.log('📍 Orden de productos guardado en Firestore');
+                logAudit('products_reordered', { count: appState.filteredProducts.length });
+
+            } catch (error) {
+                console.error('Error guardando orden:', error);
+                showNotification('❌ Error al guardar orden', 'error');
+            }
+        }
+
     </script>
 </body>
 </html>
