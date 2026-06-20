@@ -1459,8 +1459,22 @@
                         }
 
                         if (!docId) {
-                            console.warn(`⚠️ Producto no encontrado: ${img.nombre}`);
-                            notFound++;
+                            // Crear producto nuevo con la imagen
+                            console.log(`✨ Creando producto: ${img.nombre}`);
+                            const newDocRef = await db.collection('productos').add({
+                                nombre: img.nombre,
+                                descripcion: '',
+                                costo: 0,
+                                pvp: 0,
+                                ganancia: 0,
+                                categoria: 'Nutrición',
+                                imagenBase64: img.imagen,
+                                stock: 0,
+                                activo: true,
+                                creado: new Date()
+                            });
+                            updated++;
+                            console.log(`✨ Creado: ${img.nombre}`);
                             continue;
                         }
 
@@ -1582,8 +1596,22 @@
                         }
 
                         if (!docId) {
-                            console.warn(`⚠️ Producto no encontrado: ${img.nombre}`);
-                            notFound++;
+                            // Crear producto nuevo con la imagen
+                            console.log(`✨ Creando producto: ${img.nombre}`);
+                            const newDocRef = await db.collection('productos').add({
+                                nombre: img.nombre,
+                                descripcion: '',
+                                costo: 0,
+                                pvp: 0,
+                                ganancia: 0,
+                                categoria: 'Nutrición',
+                                imagenBase64: img.imagen,
+                                stock: 0,
+                                activo: true,
+                                creado: new Date()
+                            });
+                            updated++;
+                            console.log(`✨ Creado: ${img.nombre}`);
                             continue;
                         }
 
