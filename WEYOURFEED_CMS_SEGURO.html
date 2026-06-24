@@ -1946,9 +1946,9 @@
                 await batch1.commit();
                 console.log('✅ Todos los productos borrados');
 
-                // 2. CARGAR los 85 SVG
-                console.log('📦 Cargando 85 imágenes SVG...');
-                const response = await fetch('/imagenes_svg_sin_nombres.json');
+                // 2. CARGAR las 85 imágenes JPG correctas
+                console.log('📦 Cargando 85 imágenes JPG...');
+                const response = await fetch('/imagenes_jpg_correctas.json');
                 const imagenes = await response.json();
 
                 if (!Array.isArray(imagenes)) {
