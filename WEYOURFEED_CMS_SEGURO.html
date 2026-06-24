@@ -391,8 +391,8 @@
                 <input type="file" id="imageUpload" accept=".json" style="display:none;" onchange="handleImageUpload(event)">
                 <button class="btn-primary" onclick="openSingleImageUpload()" id="singleImageBtn">🖼️ Cargar Imagen Individual</button>
                 <input type="file" id="singleImageFile" accept=".png,.jpg,.jpeg" style="display:none;" onchange="handleSingleImageUpload(event)">
-                <button class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded" onclick="deleteAllAndLoadSVG()">🗑️ BORRAR TODO Y CARGAR JPG</button>
-                <button class="bg-red-900 hover:bg-red-950 text-white px-4 py-2 rounded" onclick="deleteAllProducts()">🗑️ BORRAR TODOS LOS PRODUCTOS</button>
+                <button class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded" onclick="deleteAllAndLoadSVG()">🗑️ BORRAR Y CARGAR 85 JPG</button>
+                <button class="bg-red-900 hover:bg-red-950 text-white px-4 py-2 rounded" onclick="deleteAllProducts()">🗑️🗑️ BORRAR SOLO</button>
                 <button class="btn-secondary" onclick="viewPublic()">🔍 Ver como Cliente</button>
             </div>
 
@@ -1967,7 +1967,7 @@
         // BORRAR TODO Y CARGAR JPG
         // ============================================
         async function deleteAllAndLoadSVG() {
-            const confirm = prompt('⚠️ ESCRIBE "BORRAR TODO" para confirmar que quieres BORRAR TODOS los productos y cargar solo los 85 SVG:');
+            const confirm = prompt('⚠️ ESCRIBE "BORRAR TODO" para confirmar que quieres BORRAR TODOS los productos y cargar solo los 85 JPG:');
 
             if (confirm !== 'BORRAR TODO') {
                 showNotification('❌ Cancelado', 'info');
