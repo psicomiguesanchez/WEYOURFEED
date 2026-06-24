@@ -387,8 +387,11 @@
                 <button class="btn-primary" onclick="openCategoryModal()">🏷️ Nueva Categoría</button>
                 <button class="btn-primary" onclick="openCSVDialog()" id="csvBtn">📤 Cargar CSV</button>
                 <input type="file" id="csvUpload" accept=".csv" style="display:none;" onchange="handleCSVUpload(event)">
-                <button class="btn-primary" onclick="openImageDialog()" id="loadImagesBtn">📸 Cargar Imágenes</button>
+                <button class="btn-primary" onclick="openImageDialog()" id="loadImagesBtn">📸 Cargar Imágenes JSON</button>
                 <input type="file" id="imageUpload" accept=".json" style="display:none;" onchange="handleImageUpload(event)">
+                <button class="btn-primary" onclick="openSingleImageUpload()" id="singleImageBtn">🖼️ Cargar Imagen Individual</button>
+                <input type="file" id="singleImageFile" accept=".png,.jpg,.jpeg" style="display:none;" onchange="handleSingleImageUpload(event)">
+                <button class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded" onclick="deleteAllAndLoadSVG()">🗑️ BORRAR TODO Y CARGAR SVG</button>
                 <button class="btn-secondary" onclick="viewPublic()">🔍 Ver como Cliente</button>
             </div>
 
@@ -533,6 +536,38 @@
                     <button type="button" onclick="closeCategoryModal()" class="btn-secondary flex-1">Cancelar</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Modal para cargar imagen individual -->
+    <div id="singleImageModal" class="modal">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="headline text-2xl">🖼️ Cargar Imagen Individual</h2>
+                <button onclick="closeSingleImageModal()" class="text-2xl">✕</button>
+            </div>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="text-sm text-gray-400">Selecciona una imagen PNG *</label>
+                    <div id="imagePreviewContainer" class="mt-2 p-4 bg-gray-800 rounded flex items-center justify-center" style="min-height: 150px;">
+                        <p class="text-gray-500">Sin imagen</p>
+                    </div>
+                    <button type="button" onclick="document.getElementById('singleImageFile').click()" class="btn-primary w-full mt-2">📁 Seleccionar archivo PNG</button>
+                </div>
+
+                <div>
+                    <label class="text-sm text-gray-400">Selecciona el producto *</label>
+                    <select id="productForImage" class="w-full">
+                        <option value="">-- Selecciona un producto --</option>
+                    </select>
+                </div>
+
+                <div class="flex gap-2 pt-4">
+                    <button type="button" onclick="uploadSingleImageToProduct()" class="btn-primary flex-1">✅ Cargar Imagen</button>
+                    <button type="button" onclick="closeSingleImageModal()" class="btn-secondary flex-1">Cancelar</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -1808,6 +1843,153 @@
             } catch (error) {
                 console.error('Error guardando orden:', error);
                 showNotification('❌ Error al guardar orden', 'error');
+            }
+        }
+
+        // ============================================
+        // CARGAR IMÁGENES INDIVIDUALES
+        // ============================================
+        let selectedImageFile = null;
+
+        function openSingleImageUpload() {
+            // Poblar dropdown de productos
+            const select = document.getElementById('productForImage');
+            select.innerHTML = '<option value="">-- Selecciona un producto --</option>';
+
+            appState.products.forEach(p => {
+                const option = document.createElement('option');
+                option.value = p.id;
+                option.textContent = p.nombre;
+                select.appendChild(option);
+            });
+
+            document.getElementById('singleImageModal').classList.add('active');
+            selectedImageFile = null;
+            document.getElementById('imagePreviewContainer').innerHTML = '<p class="text-gray-500">Sin imagen</p>';
+        }
+
+        function closeSingleImageModal() {
+            document.getElementById('singleImageModal').classList.remove('active');
+            selectedImageFile = null;
+        }
+
+        function handleSingleImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                selectedImageFile = e.target.result;
+                document.getElementById('imagePreviewContainer').innerHTML =
+                    `<img src="${selectedImageFile}" style="max-height: 150px; max-width: 100%;" alt="Preview">`;
+                console.log('📸 Imagen seleccionada:', file.name);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        async function uploadSingleImageToProduct() {
+            if (!selectedImageFile) {
+                showNotification('❌ Selecciona una imagen', 'error');
+                return;
+            }
+
+            const productId = document.getElementById('productForImage').value;
+            if (!productId) {
+                showNotification('❌ Selecciona un producto', 'error');
+                return;
+            }
+
+            try {
+                await db.collection('productos').doc(productId).update({
+                    imagenBase64: selectedImageFile
+                });
+
+                const product = appState.products.find(p => p.id === productId);
+                showNotification(`✅ Imagen cargada: ${product.nombre}`, 'success');
+                logAudit('single_image_uploaded', { producto: product.nombre });
+
+                // Recargar
+                await initAdmin();
+                closeSingleImageModal();
+
+            } catch (error) {
+                console.error('Error:', error);
+                showNotification('❌ Error al cargar imagen', 'error');
+            }
+        }
+
+        // ============================================
+        // BORRAR TODO Y CARGAR SVG
+        // ============================================
+        async function deleteAllAndLoadSVG() {
+            const confirm = prompt('⚠️ ESCRIBE "BORRAR TODO" para confirmar que quieres BORRAR TODOS los productos y cargar solo los 85 SVG:');
+
+            if (confirm !== 'BORRAR TODO') {
+                showNotification('❌ Cancelado', 'info');
+                return;
+            }
+
+            const btn = event.target;
+            btn.disabled = true;
+            btn.textContent = '⏳ Procesando...';
+
+            try {
+                // 1. BORRAR todos los productos
+                console.log('🗑️ Borrando todos los productos...');
+                const allProducts = await db.collection('productos').get();
+                const batch1 = db.batch();
+
+                allProducts.docs.forEach(doc => {
+                    batch1.delete(doc.ref);
+                });
+
+                await batch1.commit();
+                console.log('✅ Todos los productos borrados');
+
+                // 2. CARGAR los 85 SVG
+                console.log('📦 Cargando 85 imágenes SVG...');
+                const response = await fetch('/imagenes_svg_sin_nombres.json');
+                const imagenes = await response.json();
+
+                if (!Array.isArray(imagenes)) {
+                    throw new Error('JSON inválido');
+                }
+
+                const batch2 = db.batch();
+
+                imagenes.forEach((img, idx) => {
+                    const docRef = db.collection('productos').doc();
+                    batch2.set(docRef, {
+                        nombre: `Producto ${idx + 1}`,
+                        descripcion: '',
+                        costo: 0,
+                        pvp: 0,
+                        ganancia: 0,
+                        categoria: 'Nutrición',
+                        imagenBase64: img.imagen,
+                        stock: 0,
+                        activo: true,
+                        creado: new Date(),
+                        orden: idx,
+                        numero_svg: img.numero_original
+                    });
+                });
+
+                await batch2.commit();
+
+                console.log(`✅ ${imagenes.length} productos SVG creados`);
+                showNotification(`✅ ${imagenes.length} SVG cargados. Asigna nombres manualmente.`, 'success');
+                logAudit('bulk_delete_and_svg_load', { svg_count: imagenes.length });
+
+                // Recargar
+                await initAdmin();
+
+            } catch (error) {
+                console.error('Error:', error);
+                showNotification('❌ Error en el proceso', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🗑️ BORRAR TODO Y CARGAR SVG';
             }
         }
 
