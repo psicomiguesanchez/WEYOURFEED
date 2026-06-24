@@ -841,6 +841,29 @@
         // ============================================
         async function initAdmin() {
             try {
+                // 🔒 SEGURIDAD: Verificar que sea admin
+                const adminCheck = await db.collection('admins').doc('allowedUids').get();
+
+                if (!adminCheck.exists) {
+                    console.error('❌ ADMIN LIST NO EXISTE - Crea documento: /admins/allowedUids con field "uids"');
+                    showNotification('❌ Error de configuración - Admin list no existe', 'error');
+                    logout();
+                    return;
+                }
+
+                const allowedUids = adminCheck.data().uids || [];
+                const currentUid = auth.currentUser.uid;
+
+                if (!allowedUids.includes(currentUid)) {
+                    console.error(`❌ UID ${currentUid} NO está en admin whitelist`);
+                    showNotification('❌ No tienes permisos de ADMIN. Acceso denegado.', 'error');
+                    logAudit('unauthorized_admin_access', { uid: currentUid, email: auth.currentUser.email });
+                    logout();
+                    return;
+                }
+
+                console.log('✅ Admin verificado - Acceso autorizado');
+
                 // Cargar categorías
                 const categoriesSnapshot = await db.collection('categorias').get();
                 appState.categories = [];
