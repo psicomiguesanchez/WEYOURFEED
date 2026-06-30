@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://www.gstatic.com https://www.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://*.googleapis.com https://*.firebase.googleapis.com https://*.firebaseio.com https://*.cloudfunctions.net https://identitytoolkit.googleapis.com https://securetoken.googleapis.com">
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <title>WEYOURFEED - CMS Seguro v3</title>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -382,18 +381,34 @@
             <h1 class="headline text-4xl mb-2">Panel de Administración</h1>
             <p class="text-gray-400 mb-6">Gestión segura del catálogo WEYOURFEED con Firebase</p>
 
-            <div class="flex gap-4 mb-6">
-                <button class="btn-primary" onclick="openProductModal()">➕ Nuevo Producto</button>
-                <button class="btn-primary" onclick="openCategoryModal()">🏷️ Nueva Categoría</button>
-                <button class="btn-primary" onclick="openCSVDialog()" id="csvBtn">📤 Cargar CSV</button>
+            <div class="flex gap-2 mb-6 flex-wrap items-center">
+                <!-- Botones principales -->
+                <button class="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold py-2 px-4 rounded-lg transition transform hover:scale-105 shadow-md text-sm" onclick="openProductModal()">
+                    ➕ Producto
+                </button>
+                <button class="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-bold py-2 px-4 rounded-lg transition transform hover:scale-105 shadow-md text-sm" onclick="openCategoryModal()">
+                    🏷️ Categoría
+                </button>
+
+                <div class="border-l border-gray-600 h-8 mx-1"></div>
+
+                <!-- Botones de carga -->
+                <button class="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold py-2 px-3 rounded-lg transition transform hover:scale-105 shadow-md text-sm" onclick="openCSVDialog()" id="csvBtn">
+                    📤 CSV
+                </button>
                 <input type="file" id="csvUpload" accept=".csv" style="display:none;" onchange="handleCSVUpload(event)">
-                <button class="btn-primary" onclick="openImageDialog()" id="loadImagesBtn">📸 Cargar Imágenes JSON</button>
+
+                <button class="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-bold py-2 px-3 rounded-lg transition transform hover:scale-105 shadow-md text-sm" onclick="openImageDialog()" id="loadImagesBtn">
+                    📸 JSON
+                </button>
                 <input type="file" id="imageUpload" accept=".json" style="display:none;" onchange="handleImageUpload(event)">
-                <button class="btn-primary" onclick="openSingleImageUpload()" id="singleImageBtn">🖼️ Cargar Imagen Individual</button>
-                <input type="file" id="singleImageFile" accept=".png,.jpg,.jpeg" style="display:none;" onchange="handleSingleImageUpload(event)">
-                <button class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded" onclick="deleteAllAndLoadSVG()">🗑️ BORRAR Y CARGAR 85 JPG</button>
-                <button class="bg-red-900 hover:bg-red-950 text-white px-4 py-2 rounded" onclick="deleteAllProducts()">🗑️🗑️ BORRAR SOLO</button>
-                <button class="btn-secondary" onclick="viewPublic()">🔍 Ver como Cliente</button>
+
+                <div class="border-l border-gray-600 h-8 mx-1"></div>
+
+                <!-- Ver como cliente -->
+                <button class="bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white font-bold py-2 px-3 rounded-lg transition transform hover:scale-105 shadow-md text-sm ml-auto" onclick="viewPublic()">
+                    👁️ Cliente
+                </button>
             </div>
 
             <div class="glass p-6 mb-6">
@@ -466,7 +481,7 @@
                 <button onclick="closeProductModal()" class="text-2xl">✕</button>
             </div>
 
-            <form onsubmit="saveProduct(event)" class="space-y-4">
+            <form id="productForm" onsubmit="saveProduct(event)" class="space-y-4">
                 <input type="hidden" id="productId">
 
                 <div>
@@ -574,63 +589,79 @@
 
     <script>
         // ============================================
-        // CONFIGURACIÓN FIREBASE
+        // CONFIGURACIÓN FIREBASE (PRIVADA)
         // ============================================
-        let firebaseConfig = null;
-
-        // Cargar config desde endpoint seguro (Vercel Function)
-        async function loadFirebaseConfig() {
-            try {
-                const response = await fetch('/api/firebase-config');
-                if (!response.ok) throw new Error('Failed to load config');
-                firebaseConfig = await response.json();
-                console.log('✅ Firebase config cargado desde servidor seguro');
-            } catch (error) {
-                console.error('❌ Error cargando Firebase config:', error);
-            }
-        }
-
-        // Cargar config antes de inicializar Firebase
-        loadFirebaseConfig();
+        let __firebaseConfig = null; // 🔒 Privada - No accesible globalmente
 
         let app, auth, db;
 
-        // Inicializar Firebase cuando config y SDK estén listos
+        // 🔒 Cargar config desde endpoint seguro (Vercel Function)
+        async function loadFirebaseConfig() {
+            try {
+                const response = await fetch('/api/firebase-config');
+                if (!response.ok) throw new Error(`Failed to load config: ${response.status}`);
+                __firebaseConfig = await response.json();
+
+                // Verificar que tiene los campos necesarios
+                if (!__firebaseConfig.apiKey || !__firebaseConfig.projectId) {
+                    throw new Error('Invalid config: missing required fields');
+                }
+
+                console.log('✅ Firebase config cargado desde servidor seguro');
+                return true;
+            } catch (error) {
+                console.error('❌ Error cargando Firebase config:', error);
+                return false;
+            }
+        }
+
+        // 🔒 Inicializar Firebase cuando config y SDK estén listos
         async function initializeFirebase() {
-            // Esperar a que config esté cargada
-            let attempts = 0;
-            while (!firebaseConfig && attempts < 10) {
-                await new Promise(r => setTimeout(r, 500));
-                attempts++;
+            // Cargar config si no está lista
+            let configLoaded = !!__firebaseConfig;
+            if (!configLoaded) {
+                let attempts = 0;
+                while (!__firebaseConfig && attempts < 20) {
+                    const loaded = await loadFirebaseConfig();
+                    if (loaded) break;
+                    await new Promise(r => setTimeout(r, 500));
+                    attempts++;
+                }
             }
 
-            if (!firebaseConfig) {
-                console.error('❌ No se pudo cargar Firebase config');
+            if (!__firebaseConfig) {
+                console.error('❌ No se pudo cargar Firebase config después de 20 intentos');
+                console.error('Verifica que /api/firebase-config esté disponible');
                 return;
             }
 
-            if (typeof firebase !== 'undefined' && firebase.apps.length === 0) {
+            if (typeof firebase === 'undefined') {
+                console.error('❌ Firebase SDK no disponible');
+                setTimeout(initializeFirebase, 500);
+                return;
+            }
+
+            if (firebase.apps.length === 0) {
                 try {
-                    app = firebase.initializeApp(firebaseConfig);
+                    app = firebase.initializeApp(__firebaseConfig);
                     auth = firebase.auth();
                     db = firebase.firestore();
                     console.log('✅ Firebase inicializado correctamente');
-                    console.log('Auth:', auth);
-                    console.log('Firestore:', db);
+                    // No logear auth y db porque contienen referencias sensibles
                 } catch (error) {
                     console.error('❌ Error inicializando Firebase:', error);
                 }
-            } else if (typeof firebase === 'undefined') {
-                console.error('❌ Firebase SDK no disponible');
-                setTimeout(initializeFirebase, 500);
             }
         }
+
+        // Cargar config inmediatamente
+        loadFirebaseConfig();
 
         // Inicializar cuando el documento esté listo
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', initializeFirebase);
         } else {
-            initializeFirebase();
+            setTimeout(initializeFirebase, 100);
         }
 
         // ============================================
@@ -747,9 +778,21 @@
                 appState.loginAttempts = 0;
                 appState.lockoutUntil = null;
 
-                showNotification('✅ Sesión iniciada', 'success');
+                // 🔒 Mostrar UID en consola
+                const uid = result.user.uid;
+                console.warn('═══════════════════════════════════════════════════════');
+                console.warn('✅ LOGIN EXITOSO - TU UID PARA ADMIN WHITELIST:');
+                console.warn(`>>> ${uid} <<<`);
+                console.warn('Cópialo en los próximos 15 segundos');
+                console.warn('═══════════════════════════════════════════════════════');
+
+                showNotification('✅ Sesión iniciada. Copia tu UID de la consola (F12)', 'success');
                 showPage('adminPage');
-                await initAdmin();
+
+                // Esperar 15 segundos antes de verificar admin
+                setTimeout(() => {
+                    initAdmin();
+                }, 15000);
                 logAudit('login_success', { email: email });
             } catch (error) {
                 appState.loginAttempts++;
@@ -1004,6 +1047,7 @@
             document.getElementById('productForm').reset();
             document.getElementById('imagePreview').innerHTML = '';
             document.getElementById('deleteProductBtn').style.display = 'none';
+            updateCategorySelect();  // Poblar categorías
             document.getElementById('productModal').classList.add('active');
         }
 
@@ -1017,6 +1061,10 @@
 
             appState.editingProductId = id;
             document.getElementById('productModalTitle').textContent = 'Editar Producto';
+
+            // Poblar categorías ANTES de asignar valor
+            updateCategorySelect();
+
             document.getElementById('productName').value = sanitizeHTML(product.nombre || '');
             document.getElementById('productDesc').value = sanitizeHTML(product.descripcion || '');
             document.getElementById('productPrice').value = product.precio || 0;
@@ -1031,34 +1079,95 @@
             document.getElementById('productModal').classList.add('active');
         }
 
+        // ============================================
+        // CREAR CATEGORÍA RÁPIDA
+        // ============================================
+        async function quickAddCategory() {
+            const newCategoryName = prompt('📝 Nombre de la nueva categoría:');
+
+            if (!newCategoryName || newCategoryName.trim().length < 2) {
+                showNotification('❌ Nombre inválido', 'error');
+                return;
+            }
+
+            try {
+                const docRef = await db.collection('categorias').add({
+                    nombre: sanitizeHTML(newCategoryName.trim()),
+                    createdAt: new Date().toISOString(),
+                    createdBy: appState.user.email
+                });
+
+                // Agregar a appState
+                const newCategory = {
+                    id: docRef.id,
+                    nombre: newCategoryName.trim()
+                };
+                appState.categories.push(newCategory);
+
+                // Actualizar select y preseleccionar la nueva categoría
+                updateCategorySelect(docRef.id);
+
+                showNotification(`✅ Categoría "${newCategoryName}" creada y seleccionada`, 'success');
+                logAudit('category_created', { nombre: newCategoryName });
+
+            } catch (error) {
+                console.error('Error:', error);
+                showNotification('❌ Error al crear categoría', 'error');
+            }
+        }
+
+        // Actualizar select de categorías
+        function updateCategorySelect(selectValue = null) {
+            const select = document.getElementById('productCategory');
+            if (!select) return;
+
+            const currentValue = selectValue || select.value;
+
+            select.innerHTML = '<option value="">Seleccionar...</option>';
+
+            // Ordenar categorías alfabéticamente
+            const sortedCategories = [...appState.categories].sort((a, b) =>
+                a.nombre.localeCompare(b.nombre)
+            );
+
+            sortedCategories.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat.id;
+                option.textContent = cat.nombre;
+                select.appendChild(option);
+            });
+
+            if (currentValue) {
+                select.value = currentValue;
+            }
+        }
+
         async function saveProduct(event) {
             event.preventDefault();
 
             const nombre = document.getElementById('productName').value.trim();
             const descripcion = document.getElementById('productDesc').value.trim();
-            const precio = parseFloat(document.getElementById('productPrice').value);
-            const stock = parseInt(document.getElementById('productStock').value);
+            const precioValue = document.getElementById('productPrice').value.trim();
+            const stockValue = document.getElementById('productStock').value.trim();
             const categoriaId = document.getElementById('productCategory').value;
             const imageFile = document.getElementById('productImage').files[0];
 
-            // Validaciones
+            // Validaciones flexibles - solo requiere nombre
             if (!nombre || nombre.length < 2) {
-                showNotification('❌ Nombre inválido', 'error');
+                showNotification('❌ El nombre es requerido (mínimo 2 caracteres)', 'error');
                 return;
             }
 
-            if (isNaN(precio) || precio < 0) {
-                showNotification('❌ Precio inválido', 'error');
+            // Validar campos opcionales solo si tienen valor
+            const precio = precioValue ? parseFloat(precioValue) : null;
+            if (precioValue && (isNaN(precio) || precio < 0)) {
+                showNotification('❌ Precio debe ser un número válido', 'error');
                 return;
             }
 
-            if (isNaN(stock) || stock < 0) {
-                showNotification('❌ Stock inválido', 'error');
-                return;
-            }
-
-            if (!categoriaId) {
-                showNotification('❌ Selecciona una categoría', 'error');
+            const stock = stockValue ? parseInt(stockValue) : null;
+            if (stockValue && (isNaN(stock) || stock < 0)) {
+                showNotification('❌ Stock debe ser un número válido', 'error');
                 return;
             }
 
@@ -1080,22 +1189,27 @@
             }
 
             try {
+                // Construir objeto de datos dinámicamente - solo incluir campos con valor
                 const productData = {
                     nombre: sanitizeHTML(nombre),
-                    descripcion: sanitizeHTML(descripcion),
-                    precio: precio,
-                    stock: stock,
-                    categoriaId: categoriaId,
-                    imagenBase64: imagenBase64,
                     updatedAt: new Date().toISOString(),
                     updatedBy: appState.user.email
                 };
 
+                // Agregar campos opcionales solo si tienen valor
+                if (descripcion) productData.descripcion = sanitizeHTML(descripcion);
+                if (precio !== null) productData.precio = precio;
+                if (stock !== null) productData.stock = stock;
+                if (categoriaId) productData.categoriaId = categoriaId;
+                if (imagenBase64) productData.imagenBase64 = imagenBase64;
+
                 if (appState.editingProductId) {
+                    // Al editar: guardar solo los campos que cambiaron
                     await db.collection('productos').doc(appState.editingProductId).update(productData);
-                    showNotification('✅ Producto actualizado', 'success');
-                    logAudit('product_updated', { id: appState.editingProductId });
+                    showNotification('✅ Cambios guardados', 'success');
+                    logAudit('product_updated', { id: appState.editingProductId, fields: Object.keys(productData) });
                 } else {
+                    // Al crear: requiere nombre (ya validado arriba)
                     await db.collection('productos').add({
                         ...productData,
                         createdAt: new Date().toISOString(),
@@ -1177,9 +1291,14 @@
                             <p class="font-bold text-sm mb-2">${sanitizeHTML(p.nombre)}</p>
                             <p class="text-orange-600 font-bold mb-2">$${p.precio}</p>
                             <p class="text-gray-400 text-xs mb-2">${catName} | Stock: ${p.stock}</p>
-                            <div class="flex gap-2">
-                                <button class="btn-secondary flex-1 text-xs" onclick="editProduct('${p.id}')">✏️ Editar</button>
-                                <button class="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded text-xs" onclick="deleteProduct('${p.id}', '${p.nombre.replace(/'/g, "\\'")}')">❌</button>
+                            <div class="flex gap-2 pt-2">
+                                <button class="flex-1 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold py-2 px-4 rounded-lg transition transform hover:scale-105 shadow-lg text-sm flex items-center justify-center gap-1" onclick="editProduct('${p.id}')">
+                                    <span>✏️</span>
+                                    <span>EDITAR</span>
+                                </button>
+                                <button class="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-bold py-2 px-3 rounded-lg transition transform hover:scale-105 shadow-lg text-sm" onclick="deleteProduct('${p.id}', '${p.nombre.replace(/'/g, "\\'")}')">
+                                    <span>🗑️</span>
+                                </button>
                             </div>
                         </div>
                     </div>
