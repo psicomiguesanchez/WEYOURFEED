@@ -494,15 +494,24 @@
                     <textarea id="productDesc" class="w-full h-32" maxlength="2000"></textarea>
                 </div>
 
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-3 gap-4">
                     <div>
-                        <label class="text-sm text-gray-400">Precio *</label>
-                        <input type="number" id="productPrice" required min="0" step="0.01">
+                        <label class="text-sm text-gray-400">Costo</label>
+                        <input type="number" id="productCost" min="0" step="0.01" oninput="calculateProfit()">
                     </div>
                     <div>
-                        <label class="text-sm text-gray-400">Stock *</label>
-                        <input type="number" id="productStock" required min="0">
+                        <label class="text-sm text-gray-400">Precio PVP</label>
+                        <input type="number" id="productPrice" min="0" step="0.01" oninput="calculateProfit()">
                     </div>
+                    <div>
+                        <label class="text-sm text-gray-400">Ganancia</label>
+                        <input type="number" id="productProfit" disabled class="bg-gray-800 text-orange-500 font-bold">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="text-sm text-gray-400">Stock</label>
+                    <input type="number" id="productStock" min="0">
                 </div>
 
                 <div>
@@ -1055,9 +1064,13 @@
 
             document.getElementById('productName').value = sanitizeHTML(product.nombre || '');
             document.getElementById('productDesc').value = sanitizeHTML(product.descripcion || '');
+            document.getElementById('productCost').value = product.costo || 0;
             document.getElementById('productPrice').value = product.precio || 0;
             document.getElementById('productStock').value = product.stock || 0;
             document.getElementById('productCategory').value = product.categoriaId || '';
+
+            // Calcular ganancia
+            calculateProfit();
 
             if (product.imagenBase64) {
                 document.getElementById('imagePreview').innerHTML = `<img src="${product.imagenBase64}" class="w-full h-32 object-contain rounded">`;
@@ -1065,6 +1078,16 @@
 
             document.getElementById('deleteProductBtn').style.display = 'block';
             document.getElementById('productModal').classList.add('active');
+        }
+
+        // ============================================
+        // CALCULAR GANANCIA
+        // ============================================
+        function calculateProfit() {
+            const cost = parseFloat(document.getElementById('productCost').value) || 0;
+            const price = parseFloat(document.getElementById('productPrice').value) || 0;
+            const profit = price - cost;
+            document.getElementById('productProfit').value = profit.toFixed(2);
         }
 
         // ============================================
@@ -1135,6 +1158,7 @@
 
             const nombre = document.getElementById('productName').value.trim();
             const descripcion = document.getElementById('productDesc').value.trim();
+            const costoValue = document.getElementById('productCost').value.trim();
             const precioValue = document.getElementById('productPrice').value.trim();
             const stockValue = document.getElementById('productStock').value.trim();
             const categoriaId = document.getElementById('productCategory').value;
@@ -1147,6 +1171,12 @@
             }
 
             // Validar campos opcionales solo si tienen valor
+            const costo = costoValue ? parseFloat(costoValue) : null;
+            if (costoValue && (isNaN(costo) || costo < 0)) {
+                showNotification('❌ Costo debe ser un número válido', 'error');
+                return;
+            }
+
             const precio = precioValue ? parseFloat(precioValue) : null;
             if (precioValue && (isNaN(precio) || precio < 0)) {
                 showNotification('❌ Precio debe ser un número válido', 'error');
@@ -1186,6 +1216,7 @@
 
                 // Agregar campos opcionales solo si tienen valor
                 if (descripcion) productData.descripcion = sanitizeHTML(descripcion);
+                if (costo !== null) productData.costo = costo;
                 if (precio !== null) productData.precio = precio;
                 if (stock !== null) productData.stock = stock;
                 if (categoriaId) productData.categoriaId = categoriaId;
@@ -1277,8 +1308,12 @@
                         </div>
                         <div class="p-4">
                             <p class="font-bold text-sm mb-2">${sanitizeHTML(p.nombre)}</p>
-                            <p class="text-orange-600 font-bold mb-2">$${p.precio}</p>
-                            <p class="text-gray-400 text-xs mb-2">${catName} | Stock: ${p.stock}</p>
+                            <div class="grid grid-cols-3 gap-2 mb-2 text-xs">
+                                <div class="text-gray-400">Costo: <span class="text-white">$${(p.costo || 0).toFixed(2)}</span></div>
+                                <div class="text-orange-600 font-bold">PVP: $${(p.precio || 0).toFixed(2)}</div>
+                                <div class="text-green-500 font-bold">Gan: $${((p.precio || 0) - (p.costo || 0)).toFixed(2)}</div>
+                            </div>
+                            <p class="text-gray-400 text-xs">${catName} | Stock: ${p.stock}</p>
                             <div class="flex gap-2 pt-2">
                                 <button class="flex-1 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold py-2 px-4 rounded-lg transition transform hover:scale-105 shadow-lg text-sm flex items-center justify-center gap-1" onclick="editProduct('${p.id}')">
                                     <span>✏️</span>
