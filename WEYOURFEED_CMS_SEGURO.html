@@ -778,21 +778,9 @@
                 appState.loginAttempts = 0;
                 appState.lockoutUntil = null;
 
-                // 🔒 Mostrar UID en consola
-                const uid = result.user.uid;
-                console.warn('═══════════════════════════════════════════════════════');
-                console.warn('✅ LOGIN EXITOSO - TU UID PARA ADMIN WHITELIST:');
-                console.warn(`>>> ${uid} <<<`);
-                console.warn('Cópialo en los próximos 15 segundos');
-                console.warn('═══════════════════════════════════════════════════════');
-
-                showNotification('✅ Sesión iniciada. Copia tu UID de la consola (F12)', 'success');
+                showNotification('✅ Sesión iniciada', 'success');
                 showPage('adminPage');
-
-                // Esperar 15 segundos antes de verificar admin
-                setTimeout(() => {
-                    initAdmin();
-                }, 15000);
+                await initAdmin();
                 logAudit('login_success', { email: email });
             } catch (error) {
                 appState.loginAttempts++;
