@@ -1308,10 +1308,15 @@
                         </div>
                         <div class="p-4">
                             <p class="font-bold text-sm mb-2">${sanitizeHTML(p.nombre)}</p>
-                            <div class="grid grid-cols-3 gap-2 mb-2 text-xs">
-                                <div class="text-gray-400">Costo: <span class="text-white">$${(p.costo || 0).toFixed(2)}</span></div>
-                                <div class="text-orange-600 font-bold">PVP: $${(p.precio || 0).toFixed(2)}</div>
-                                <div class="text-green-500 font-bold">Gan: $${((p.precio || 0) - (p.costo || 0)).toFixed(2)}</div>
+                            <div class="space-y-1 mb-2">
+                                <div class="text-xs">
+                                    <span class="text-gray-400">Costo:</span>
+                                    <span class="text-white font-semibold">$${(p.costo || 0).toFixed(2)}</span>
+                                    <span class="text-orange-600 font-bold ml-2">PVP: $${(p.precio || 0).toFixed(2)}</span>
+                                </div>
+                                <div class="text-xs">
+                                    <span class="text-green-500 font-bold">Ganancia: $${((p.precio || 0) - (p.costo || 0)).toFixed(2)}</span>
+                                </div>
                             </div>
                             <p class="text-gray-400 text-xs">${catName} | Stock: ${p.stock}</p>
                             <div class="flex gap-2 pt-2">
