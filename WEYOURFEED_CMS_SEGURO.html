@@ -1337,11 +1337,11 @@
                             <div class="space-y-1 mb-2">
                                 <div class="text-xs">
                                     <span class="text-gray-400">Costo:</span>
-                                    <span class="text-white font-semibold">$${(p.costo || 0).toFixed(2)}</span>
-                                    <span class="text-orange-600 font-bold ml-2">PVP: $${(p.precio || 0).toFixed(2)}</span>
+                                    <span class="text-white font-semibold">$${(p.costo || 0)..toLocaleString('es-ES')(2)}</span>
+                                    <span class="text-orange-600 font-bold ml-2">PVP: $${(p.precio || 0)..toLocaleString('es-ES')(2)}</span>
                                 </div>
                                 <div class="text-xs">
-                                    <span class="text-green-500 font-bold">Ganancia: $${((p.precio || 0) - (p.costo || 0)).toFixed(2)}</span>
+                                    <span class="text-green-500 font-bold">Ganancia: $${((p.precio || 0) - (p.costo || 0))..toLocaleString('es-ES')(2)}</span>
                                 </div>
                             </div>
                             <p class="text-gray-400 text-xs">${catName} | Stock: ${p.stock}</p>
