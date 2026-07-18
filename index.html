@@ -3,13 +3,278 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WEYOURFEED - Redirigiendo...</title>
-    <script>
-        // Redirigir al CMS
-        window.location.href = './WEYOURFEED_CMS_SEGURO.html';
-    </script>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+    <title>WEYOURFEED - Catálogo de Productos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;700&family=Inter:wght@400;500;600;700&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0A0A0A;
+            color: #FFFFFF;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .headline {
+            font-family: 'Oswald', sans-serif;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-style: italic;
+        }
+
+        .logo-text {
+            font-family: 'Oswald', sans-serif;
+            font-size: 2rem;
+            font-weight: 700;
+            font-style: italic;
+            letter-spacing: 2px;
+        }
+
+        .logo-we { color: #FF6600; text-shadow: 0 0 20px #FF6600; }
+        .logo-your { color: #FFFFFF; }
+        .logo-feed { color: #FF6600; text-shadow: 0 0 20px #FF6600; }
+
+        .glass {
+            background: rgba(19, 19, 19, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 102, 0, 0.2);
+        }
+
+        .product-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 102, 0, 0.3);
+            box-shadow: 0 0 15px rgba(255, 102, 0, 0.2);
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .product-card:hover {
+            border-color: rgba(255, 102, 0, 0.8);
+            box-shadow: 0 0 30px rgba(255, 102, 0, 0.5);
+            transform: translateY(-5px);
+        }
+
+        .grid-products {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 24px;
+            margin-top: 32px;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 16px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            z-index: 1000;
+            animation: slideIn 0.3s ease-in-out;
+        }
+
+        .notification.error {
+            background: #EF4444;
+            color: white;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(400px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(255, 102, 0, 0.2);
+            border-top-color: #FF6600;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .btn-admin {
+            background: linear-gradient(135deg, #0084ff 0%, #005fd4 100%);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-admin:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(0, 132, 255, 0.4);
+        }
+    </style>
 </head>
 <body>
-    <p>Redirigiendo al catálogo...</p>
+    <!-- Notificación de mantenimiento -->
+    <div id="maintenanceNotif" style="position: fixed; top: 20px; right: 20px; background: #FF6600; color: #000; padding: 16px 24px; border-radius: 8px; font-weight: bold; z-index: 9999; box-shadow: 0 4px 12px rgba(255, 102, 0, 0.4); cursor: pointer; max-width: 300px;" onclick="this.style.display='none';">
+      ⚠️ En mantenimiento - Algunos elementos pueden no estar actualizados
+    </div>
+
+    <!-- Header -->
+    <nav class="glass sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+            <span class="logo-text">
+                <span class="logo-we">WE</span><span class="logo-your">YOUR</span><span class="logo-feed">FEED</span>
+            </span>
+            <button onclick="goToAdmin()" class="btn-admin">🔐 Acceso Admin</button>
+        </div>
+    </nav>
+
+    <!-- Contenido principal -->
+    <div class="max-w-7xl mx-auto px-6 py-8">
+        <h1 class="headline text-4xl mb-2">Catálogo WEYOURFEED</h1>
+        <p class="text-gray-400 mb-6">Descubre nuestros productos disponibles</p>
+
+        <!-- Búsqueda y filtros -->
+        <div class="flex gap-4 mb-6">
+            <input type="text" id="clientSearch" placeholder="Buscar por nombre..." class="flex-1 bg-gray-900 border-2 border-orange-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-orange-400" oninput="filterClientProducts()">
+            <select id="clientCategory" class="w-44 bg-gray-900 border-2 border-orange-600 rounded-lg px-4 py-2 text-white focus:outline-none" onchange="filterClientProducts()">
+                <option value="">Todas las categorías</option>
+            </select>
+        </div>
+
+        <!-- Grid de productos -->
+        <div id="clientGrid" class="grid-products">
+            <div class="col-span-full text-center py-12">
+                <div class="spinner mx-auto mb-4"></div>
+                <p class="text-gray-400">Cargando catálogo...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let db;
+        let products = [];
+        let categories = [];
+        let lastRequestTime = 0;
+        const REQUEST_THROTTLE_MS = 500;
+
+        async function initializeFirebase() {
+            try {
+                const response = await fetch('/api/firebase-config');
+                if (!response.ok) throw new Error(`Config failed: ${response.status}`);
+                const firebaseConfig = await response.json();
+
+                if (firebase.apps.length === 0) {
+                    firebase.initializeApp(firebaseConfig);
+                }
+                db = firebase.firestore();
+                console.log('✅ Firebase initialized (CLIENT)');
+                loadProducts();
+            } catch (error) {
+                console.error('❌ Firebase init failed:', error);
+                showNotification('Error cargando catálogo', 'error');
+            }
+        }
+
+        async function loadProducts() {
+            try {
+                const now = Date.now();
+                if (now - lastRequestTime < REQUEST_THROTTLE_MS) return;
+                lastRequestTime = now;
+
+                const productsSnap = await db.collection('productos').get();
+                products = productsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+                const categoriesSnap = await db.collection('categorias').get();
+                categories = categoriesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+                renderProducts(products);
+                updateCategoryFilter();
+            } catch (error) {
+                console.error('❌ Load failed:', error);
+                showNotification('Error cargando productos', 'error');
+            }
+        }
+
+        function renderProducts(filtered) {
+            const grid = document.getElementById('clientGrid');
+            if (filtered.length === 0) {
+                grid.innerHTML = '<div class="col-span-full text-center py-12"><p class="text-gray-400">No hay productos disponibles</p></div>';
+                return;
+            }
+
+            grid.innerHTML = filtered.map(p => {
+                const categoryName = categories.find(c => c.id === p.categoriaId)?.nombre || 'Sin categoría';
+                const costo = p.costo ? parseInt(p.costo).toLocaleString('es-ES') : '0';
+                const precio = p.precio ? parseInt(p.precio).toLocaleString('es-ES') : '0';
+                const ganancia = p.costo && p.precio ? (parseInt(p.precio) - parseInt(p.costo)).toLocaleString('es-ES') : '0';
+
+                return `
+                    <div class="product-card">
+                        <div style="height: 200px; background: #000; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                            ${p.imagenBase64 ? `<img src="${p.imagenBase64}" style="max-width: 100%; max-height: 100%; object-fit: contain;">` : '<p class="text-gray-500">Sin imagen</p>'}
+                        </div>
+                        <div class="p-4">
+                            <p class="font-bold text-sm mb-2">${p.nombre || 'Sin nombre'}</p>
+                            <div class="space-y-1 mb-2">
+                                <div class="text-xs">
+                                    <span class="text-gray-400">Costo:</span>
+                                    <span class="text-white font-semibold">$${costo}</span>
+                                    <span class="text-orange-600 font-bold ml-2">PVP: $${precio}</span>
+                                </div>
+                                <div class="text-xs">
+                                    <span class="text-green-500 font-bold">Ganancia: $${ganancia}</span>
+                                </div>
+                            </div>
+                            <p class="text-gray-400 text-xs">${categoryName} | Stock: ${p.stock || 0}</p>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function filterClientProducts() {
+            const searchTerm = document.getElementById('clientSearch').value.toLowerCase();
+            const selectedCategory = document.getElementById('clientCategory').value;
+
+            let filtered = products.filter(p => {
+                const matchesSearch = p.nombre?.toLowerCase().includes(searchTerm);
+                const matchesCategory = !selectedCategory || p.categoriaId === selectedCategory;
+                return matchesSearch && matchesCategory;
+            });
+
+            renderProducts(filtered);
+        }
+
+        function updateCategoryFilter() {
+            const select = document.getElementById('clientCategory');
+            select.innerHTML = '<option value="">Todas las categorías</option>' + categories.map(c =>
+                `<option value="${c.id}">${c.nombre}</option>`
+            ).join('');
+        }
+
+        function showNotification(message, type) {
+            const notif = document.createElement('div');
+            notif.className = `notification ${type}`;
+            notif.textContent = message;
+            document.body.appendChild(notif);
+            setTimeout(() => notif.remove(), 3000);
+        }
+
+        function goToAdmin() {
+            window.location.href = '/admin.html';
+        }
+
+        initializeFirebase();
+    </script>
 </body>
 </html>
