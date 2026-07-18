@@ -416,6 +416,11 @@
 
                 <div class="border-l border-gray-600 h-8 mx-1"></div>
 
+                <!-- Métricas -->
+                <button class="bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white font-bold py-2 px-3 rounded-lg transition transform hover:scale-105 shadow-md text-sm" onclick="showMetricsPage()">
+                    📊 Métricas
+                </button>
+
                 <!-- Ver como cliente -->
                 <button class="bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white font-bold py-2 px-3 rounded-lg transition transform hover:scale-105 shadow-md text-sm ml-auto" onclick="viewPublic()">
                     👁️ Cliente
@@ -446,6 +451,59 @@
                         <div class="spinner mx-auto mb-4"></div>
                         <p class="text-gray-400">Cargando...</p>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PAGE: MÉTRICAS -->
+    <div id="metricsPage" class="page">
+        <nav class="glass sticky top-0 z-50">
+            <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+                <span class="logo-text">
+                    <span class="logo-we">WE</span><span class="logo-your">YOUR</span><span class="logo-feed">FEED</span>
+                </span>
+                <button onclick="backToAdmin()" class="btn-secondary">← Panel Admin</button>
+            </div>
+        </nav>
+
+        <div class="max-w-7xl mx-auto px-6 py-8">
+            <h1 class="headline text-4xl mb-2">📊 Métricas y Estadísticas</h1>
+            <p class="text-gray-400 mb-6">Análisis de ventas y desempeño del catálogo</p>
+
+            <!-- Estadísticas Principales -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                <div class="glass p-6 text-center">
+                    <p class="text-gray-400 text-sm">Total Productos</p>
+                    <p class="text-4xl font-bold text-orange-600" id="metricTotalProducts">0</p>
+                </div>
+                <div class="glass p-6 text-center">
+                    <p class="text-gray-400 text-sm">Precio Promedio</p>
+                    <p class="text-4xl font-bold text-blue-600" id="metricAvgPrice">$0</p>
+                </div>
+                <div class="glass p-6 text-center">
+                    <p class="text-gray-400 text-sm">Ingresos Totales</p>
+                    <p class="text-4xl font-bold text-green-600" id="metricTotalRevenue">$0</p>
+                </div>
+                <div class="glass p-6 text-center">
+                    <p class="text-gray-400 text-sm">Ganancia Total</p>
+                    <p class="text-4xl font-bold text-purple-600" id="metricTotalProfit">$0</p>
+                </div>
+            </div>
+
+            <!-- Productos Más Vendidos -->
+            <div class="glass p-6 mb-8">
+                <h2 class="headline text-2xl mb-4">Top 10 Productos Más Caros</h2>
+                <div id="topProductsList" class="space-y-2">
+                    <p class="text-gray-400">Cargando...</p>
+                </div>
+            </div>
+
+            <!-- Análisis por Categoría -->
+            <div class="glass p-6">
+                <h2 class="headline text-2xl mb-4">Productos por Categoría</h2>
+                <div id="categoriesAnalysis" class="space-y-2">
+                    <p class="text-gray-400">Cargando...</p>
                 </div>
             </div>
         </div>
@@ -1519,8 +1577,8 @@
                 let imported = 0;
                 for (const prod of productos) {
                     try {
-                        const costo = parseFloat(prod.costo) || 0;
-                        const pvp = parseFloat(prod.pvp) || 0;
+                        const costo = parseInt(prod.costo) || 0;
+                        const pvp = parseInt(prod.pvp) || 0;
                         const ganancia = pvp - costo;
 
                         await db.collection('productos').add({
@@ -1585,7 +1643,7 @@
                         await db.collection('productos').add({
                             nombre: prod.nombre || 'Sin nombre',
                             descripcion: prod.descripcion || '',
-                            precio: parseFloat(prod.precio) || 0,
+                            precio: parseInt(prod.precio) || 0,
                             categoria: prod.categoria || 'Sin categoría',
                             imagen: prod.imagen || '',
                             stock: parseInt(prod.stock) || 0,
@@ -2009,6 +2067,73 @@
             } finally {
                 btn.disabled = false;
                 btn.textContent = '📦 Cargar Productos';
+            }
+        }
+
+        // ============================================
+        // MÉTRICAS Y ANALYTICS
+        // ============================================
+        async function showMetricsPage() {
+            showPage('metricsPage');
+            await loadMetrics();
+        }
+
+        async function loadMetrics() {
+            try {
+                // Cargar todos los productos
+                const snap = await db.collection('productos').get();
+                const products = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+                // Cálculos
+                const totalProducts = products.length;
+                const totalPrice = products.reduce((sum, p) => sum + (parseInt(p.precio) || 0), 0);
+                const avgPrice = totalProducts > 0 ? totalPrice / totalProducts : 0;
+                const totalCost = products.reduce((sum, p) => sum + (parseInt(p.costo) || 0), 0);
+                const totalProfit = totalPrice - totalCost;
+
+                // Top 10 más caros
+                const topProducts = products
+                    .sort((a, b) => (parseInt(b.precio) || 0) - (parseInt(a.precio) || 0))
+                    .slice(0, 10);
+
+                // Agrupar por categoría
+                const byCategory = {};
+                products.forEach(p => {
+                    const cat = p.categoriaId || 'Sin categoría';
+                    if (!byCategory[cat]) {
+                        byCategory[cat] = { count: 0, total: 0 };
+                    }
+                    byCategory[cat].count++;
+                    byCategory[cat].total += parseInt(p.precio) || 0;
+                });
+
+                // Mostrar métricas
+                document.getElementById('metricTotalProducts').textContent = totalProducts;
+                document.getElementById('metricAvgPrice').textContent = '$' + Math.round(avgPrice).toLocaleString('es-ES');
+                document.getElementById('metricTotalRevenue').textContent = '$' + totalPrice.toLocaleString('es-ES');
+                document.getElementById('metricTotalProfit').textContent = '$' + totalProfit.toLocaleString('es-ES');
+
+                // Top productos
+                const topHtml = topProducts.map((p, i) => `
+                    <div class="flex justify-between items-center p-3 bg-gray-900 rounded-lg">
+                        <span>#${i + 1} ${p.nombre || 'Sin nombre'}</span>
+                        <span class="text-orange-600 font-bold">$${(parseInt(p.precio) || 0).toLocaleString('es-ES')}</span>
+                    </div>
+                `).join('');
+                document.getElementById('topProductsList').innerHTML = topHtml || '<p class="text-gray-500">Sin productos</p>';
+
+                // Por categoría
+                const catHtml = Object.entries(byCategory).map(([cat, data]) => `
+                    <div class="flex justify-between items-center p-3 bg-gray-900 rounded-lg">
+                        <span>${cat}</span>
+                        <span>${data.count} productos | $${data.total.toLocaleString('es-ES')}</span>
+                    </div>
+                `).join('');
+                document.getElementById('categoriesAnalysis').innerHTML = catHtml || '<p class="text-gray-500">Sin categorías</p>';
+
+            } catch (error) {
+                console.error('Error loading metrics:', error);
+                showNotification('❌ Error cargando métricas', 'error');
             }
         }
 
