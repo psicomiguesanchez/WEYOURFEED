@@ -134,7 +134,6 @@
             <span class="logo-text">
                 <span class="logo-we">WE</span><span class="logo-your">YOUR</span><span class="logo-feed">FEED</span>
             </span>
-            <button onclick="goToAdmin()" class="btn-admin">🔐 Acceso Admin</button>
         </div>
     </nav>
 
@@ -268,10 +267,6 @@
             notif.textContent = message;
             document.body.appendChild(notif);
             setTimeout(() => notif.remove(), 3000);
-        }
-
-        function goToAdmin() {
-            window.location.href = '/admin.html';
         }
 
         initializeFirebase();
