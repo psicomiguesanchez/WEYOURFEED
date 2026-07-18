@@ -410,6 +410,10 @@
                 </button>
                 <input type="file" id="imageUpload" accept=".json" style="display:none;" onchange="handleImageUpload(event)">
 
+                <button class="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-bold py-2 px-3 rounded-lg transition transform hover:scale-105 shadow-md text-sm" onclick="loadProductsFromJSON()">
+                    📦 Cargar 85
+                </button>
+
                 <div class="border-l border-gray-600 h-8 mx-1"></div>
 
                 <!-- Ver como cliente -->
@@ -1916,6 +1920,96 @@
 
             // Sincronizar selector
             document.getElementById('columnSelector').value = cols;
+        }
+
+        // ============================================
+        // CARGA MASIVA DE PRODUCTOS
+        // ============================================
+        async function loadProductsFromJSON() {
+            if (!confirm('¿Cargar 85 productos desde imagenes_jpg_correctas.json?\n\nEsto reemplazará los productos existentes.')) {
+                return;
+            }
+
+            const btn = event.target;
+            btn.disabled = true;
+            btn.textContent = '⏳ Cargando...';
+
+            try {
+                // Fetch del archivo JSON
+                const response = await fetch('/imagenes_jpg_correctas.json');
+                if (!response.ok) throw new Error('No se pudo cargar el archivo');
+
+                const data = await response.json();
+                const productos = data.imagenes || [];
+
+                if (productos.length === 0) {
+                    throw new Error('No hay productos en el archivo');
+                }
+
+                console.log(`Procesando ${productos.length} productos...`);
+
+                // Borrar productos existentes
+                const existentes = await db.collection('productos').get();
+                const batch1 = db.batch();
+                let deleteCount = 0;
+
+                for (const doc of existentes.docs) {
+                    batch1.delete(doc.ref);
+                    deleteCount++;
+                    if (deleteCount % 500 === 0) {
+                        await batch1.commit();
+                    }
+                }
+                if (deleteCount % 500 !== 0) {
+                    await batch1.commit();
+                }
+
+                console.log(`Eliminados ${deleteCount} productos antiguos`);
+
+                // Cargar nuevos productos
+                let batch = db.batch();
+                let count = 0;
+
+                for (const prod of productos) {
+                    const docRef = db.collection('productos').doc();
+                    batch.set(docRef, {
+                        nombre: prod.nombre || `Producto ${count + 1}`,
+                        imagenBase64: prod.imagenBase64 || '',
+                        categoriaId: 'default',
+                        descripcion: '',
+                        precio: 0,
+                        costo: 0,
+                        stock: 0,
+                        createdAt: new Date(),
+                        updatedAt: new Date()
+                    });
+
+                    count++;
+                    if (count % 500 === 0) {
+                        await batch.commit();
+                        batch = db.batch();
+                        console.log(`${count} productos cargados...`);
+                        btn.textContent = `⏳ Cargando... ${count}/${productos.length}`;
+                    }
+                }
+
+                if (count % 500 !== 0) {
+                    await batch.commit();
+                }
+
+                console.log(`✅ ${count} productos cargados exitosamente`);
+                showNotification(`✅ ${count} productos cargados`, 'success');
+
+                // Recargar
+                await initAdmin();
+
+            } catch (error) {
+                console.error('Error al cargar:', error);
+                showNotification(`❌ Error: ${error.message}`, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '📦 Cargar Productos';
+            }
         }
 
         // ============================================
