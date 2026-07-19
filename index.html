@@ -134,6 +134,10 @@
             <span class="logo-text">
                 <span class="logo-we">WE</span><span class="logo-your">YOUR</span><span class="logo-feed">FEED</span>
             </span>
+            <button onclick="toggleCart()" class="relative">
+                <span class="text-2xl">🛒</span>
+                <span id="cartCount" class="absolute -top-2 -right-2 bg-orange-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">0</span>
+            </button>
         </div>
     </nav>
 
@@ -155,6 +159,41 @@
             <div class="col-span-full text-center py-12">
                 <div class="spinner mx-auto mb-4"></div>
                 <p class="text-gray-400">Cargando catálogo...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- CARRITO MODAL -->
+    <div id="cartModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:1000;" onclick="if(event.target.id==='cartModal') toggleCart()">
+        <div style="position:absolute; right:0; top:0; width:400px; height:100%; background:#0A0A0A; border-left:2px solid #FF6600; overflow-y:auto; display:flex; flex-direction:column;">
+            <!-- Header -->
+            <div style="padding:20px; border-bottom:1px solid #FF6600; display:flex; justify-content:space-between; align-items:center;">
+                <h2 style="color:#FF6600; font-size:20px; font-weight:bold;">🛒 Carrito</h2>
+                <button onclick="toggleCart()" style="background:none; border:none; color:#FF6600; font-size:24px; cursor:pointer;">✕</button>
+            </div>
+
+            <!-- Items -->
+            <div id="cartItems" style="flex:1; padding:20px; overflow-y:auto;">
+                <p style="color:#888; text-align:center;">Carrito vacío</p>
+            </div>
+
+            <!-- Total -->
+            <div style="padding:20px; border-top:1px solid #FF6600; background:rgba(255,102,0,0.1);">
+                <div style="color:#FFF; font-size:18px; margin-bottom:15px;">
+                    <strong>Total:</strong> <span id="cartTotal" style="color:#FF6600; font-size:24px;">$0</span>
+                </div>
+
+                <!-- Formulario Cliente -->
+                <div style="margin-bottom:15px;">
+                    <input type="text" id="clientName" placeholder="Tu nombre" style="width:100%; padding:8px; margin-bottom:10px; background:#1a1a1a; border:1px solid #FF6600; border-radius:6px; color:#FFF;">
+                    <input type="email" id="clientEmail" placeholder="Tu email" style="width:100%; padding:8px; margin-bottom:10px; background:#1a1a1a; border:1px solid #FF6600; border-radius:6px; color:#FFF;">
+                    <input type="tel" id="clientPhone" placeholder="Tu teléfono" style="width:100%; padding:8px; background:#1a1a1a; border:1px solid #FF6600; border-radius:6px; color:#FFF;">
+                </div>
+
+                <!-- Botón Pagar -->
+                <button onclick="checkout()" style="width:100%; padding:12px; background:linear-gradient(135deg, #FF6600 0%, #FF8800 100%); color:#000; border:none; border-radius:6px; font-weight:bold; cursor:pointer; font-size:16px;">
+                    Pagar con Wompi 💳
+                </button>
             </div>
         </div>
     </div>
@@ -224,17 +263,15 @@
                         </div>
                         <div class="p-4">
                             <p class="font-bold text-sm mb-2">${p.nombre || 'Sin nombre'}</p>
-                            <div class="space-y-1 mb-2">
+                            <div class="space-y-1 mb-3">
                                 <div class="text-xs">
-                                    <span class="text-gray-400">Costo:</span>
-                                    <span class="text-white font-semibold">$${costo}</span>
-                                    <span class="text-orange-600 font-bold ml-2">PVP: $${precio}</span>
+                                    <span class="text-orange-600 font-bold">$${precio}</span>
                                 </div>
-                                <div class="text-xs">
-                                    <span class="text-green-500 font-bold">Ganancia: $${ganancia}</span>
-                                </div>
+                                <p class="text-gray-400 text-xs">${categoryName} | Stock: ${p.stock || 0}</p>
                             </div>
-                            <p class="text-gray-400 text-xs">${categoryName} | Stock: ${p.stock || 0}</p>
+                            <button onclick="addToCart('${p.id}')" style="width:100%; background:linear-gradient(135deg, #FF6600 0%, #FF8800 100%); color:#000; border:none; padding:8px; border-radius:6px; font-weight:bold; cursor:pointer; font-size:14px;">
+                                🛒 Agregar
+                            </button>
                         </div>
                     </div>
                 `;
@@ -267,6 +304,122 @@
             notif.textContent = message;
             document.body.appendChild(notif);
             setTimeout(() => notif.remove(), 3000);
+        }
+
+        // ============================================
+        // CARRITO DE COMPRAS
+        // ============================================
+        let appCart = [];
+
+        function toggleCart() {
+            const modal = document.getElementById('cartModal');
+            modal.style.display = modal.style.display === 'none' ? 'flex' : 'none';
+        }
+
+        function addToCart(productId) {
+            const product = products.find(p => p.id === productId);
+            if (!product) return;
+
+            const cartItem = appCart.find(item => item.id === productId);
+            if (cartItem) {
+                cartItem.cantidad++;
+            } else {
+                appCart.push({
+                    id: product.id,
+                    nombre: product.nombre,
+                    precio: parseInt(product.precio) || 0,
+                    cantidad: 1
+                });
+            }
+
+            updateCartUI();
+            showNotification(`✅ ${product.nombre} agregado al carrito`, 'success');
+        }
+
+        function removeFromCart(productId) {
+            appCart = appCart.filter(item => item.id !== productId);
+            updateCartUI();
+        }
+
+        function updateQuantity(productId, quantity) {
+            const item = appCart.find(i => i.id === productId);
+            if (item) {
+                item.cantidad = Math.max(1, parseInt(quantity));
+                updateCartUI();
+            }
+        }
+
+        function updateCartUI() {
+            document.getElementById('cartCount').textContent = appCart.length > 0 ? appCart.length : '0';
+
+            const itemsDiv = document.getElementById('cartItems');
+            if (appCart.length === 0) {
+                itemsDiv.innerHTML = '<p style="color:#888; text-align:center;">Carrito vacío</p>';
+                document.getElementById('cartTotal').textContent = '$0';
+                return;
+            }
+
+            let total = 0;
+            itemsDiv.innerHTML = appCart.map(item => {
+                const subtotal = item.precio * item.cantidad;
+                total += subtotal;
+                return `
+                    <div style="background:#1a1a1a; padding:12px; margin-bottom:10px; border-radius:8px; border:1px solid #333;">
+                        <div style="color:#FFF; font-weight:bold; margin-bottom:8px;">${item.nombre}</div>
+                        <div style="color:#999; margin-bottom:8px;">$${item.precio.toLocaleString('es-ES')} ×
+                            <input type="number" value="${item.cantidad}" min="1" onchange="updateQuantity('${item.id}', this.value)" style="width:50px; padding:4px; background:#0a0a0a; border:1px solid #FF6600; color:#FFF; border-radius:4px;">
+                            = $${subtotal.toLocaleString('es-ES')}
+                        </div>
+                        <button onclick="removeFromCart('${item.id}')" style="background:#EF4444; color:#FFF; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-size:12px;">Eliminar</button>
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('cartTotal').textContent = '$' + total.toLocaleString('es-ES');
+        }
+
+        async function checkout() {
+            if (appCart.length === 0) {
+                showNotification('❌ Carrito vacío', 'error');
+                return;
+            }
+
+            const name = document.getElementById('clientName').value.trim();
+            const email = document.getElementById('clientEmail').value.trim();
+            const phone = document.getElementById('clientPhone').value.trim();
+
+            if (!name || !email || !phone) {
+                showNotification('❌ Completa todos tus datos', 'error');
+                return;
+            }
+
+            if (!email.includes('@')) {
+                showNotification('❌ Email inválido', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/create-wompi-order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        cart: appCart,
+                        customer: { name, email, phone }
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Redirigir a Wompi
+                    window.location.href = data.checkout_url;
+                } else {
+                    showNotification(`❌ ${data.error}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showNotification('❌ Error procesando pedido', 'error');
+            }
         }
 
         initializeFirebase();
