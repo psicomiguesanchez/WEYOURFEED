@@ -252,9 +252,7 @@
 
             grid.innerHTML = filtered.map(p => {
                 const categoryName = categories.find(c => c.id === p.categoriaId)?.nombre || 'Sin categoría';
-                const costo = p.costo ? parseInt(p.costo).toLocaleString('es-ES') : '0';
                 const precio = p.precio ? parseInt(p.precio).toLocaleString('es-ES') : '0';
-                const ganancia = p.costo && p.precio ? (parseInt(p.precio) - parseInt(p.costo)).toLocaleString('es-ES') : '0';
 
                 return `
                     <div class="product-card">
@@ -263,14 +261,12 @@
                         </div>
                         <div class="p-4">
                             <p class="font-bold text-sm mb-2">${p.nombre || 'Sin nombre'}</p>
-                            <div class="space-y-1 mb-3">
-                                <div class="text-xs">
-                                    <span class="text-orange-600 font-bold">$${precio}</span>
-                                </div>
-                                <p class="text-gray-400 text-xs">${categoryName} | Stock: ${p.stock || 0}</p>
+                            <div class="space-y-2 mb-3">
+                                <div style="font-size:20px; color:#FF6600; font-weight:bold;">$${precio}</div>
+                                <p class="text-gray-400 text-xs">${categoryName}</p>
                             </div>
-                            <button onclick="addToCart('${p.id}')" style="width:100%; background:linear-gradient(135deg, #FF6600 0%, #FF8800 100%); color:#000; border:none; padding:8px; border-radius:6px; font-weight:bold; cursor:pointer; font-size:14px;">
-                                🛒 Agregar
+                            <button onclick="addToCart('${p.id}')" style="width:100%; background:linear-gradient(135deg, #FF6600 0%, #FF8800 100%); color:#000; border:none; padding:10px; border-radius:6px; font-weight:bold; cursor:pointer; font-size:14px;">
+                                🛒 Agregar al Carrito
                             </button>
                         </div>
                     </div>
