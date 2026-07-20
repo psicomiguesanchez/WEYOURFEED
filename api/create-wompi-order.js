@@ -19,13 +19,25 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Datos incompletos' });
     }
 
-    // Configuración de Wompi
+    // Configuración de Wompi - DEBUG
     const WOMPI_PUBLIC_KEY = process.env.WOMPI_PUBLIC_KEY;
     const WOMPI_INTEGRITY_SECRET = process.env.WOMPI_INTEGRITY_SECRET;
 
+    console.log('🔍 DEBUG - Wompi Config:', {
+      public_key: WOMPI_PUBLIC_KEY ? WOMPI_PUBLIC_KEY.substring(0, 15) + '...' : 'UNDEFINED',
+      integrity_secret: WOMPI_INTEGRITY_SECRET ? 'SET' : 'UNDEFINED',
+      all_env_keys: Object.keys(process.env).filter(k => k.includes('WOMPI'))
+    });
+
     if (!WOMPI_PUBLIC_KEY || !WOMPI_INTEGRITY_SECRET) {
       console.error('❌ Wompi Keys Missing - Verifica variables en Vercel');
-      return res.status(500).json({ error: 'Wompi no configurado' });
+      return res.status(500).json({
+        error: 'Wompi no configurado',
+        debug: {
+          public_key: WOMPI_PUBLIC_KEY ? 'SET' : 'UNDEFINED',
+          integrity_secret: WOMPI_INTEGRITY_SECRET ? 'SET' : 'UNDEFINED'
+        }
+      });
     }
 
     // Generar referencia única
