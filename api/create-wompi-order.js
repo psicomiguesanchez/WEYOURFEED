@@ -59,8 +59,8 @@ export default async function handler(req, res) {
       .update(integrityString)
       .digest('hex');
 
-    // URL de retorno
-    const redirectUrl = `https://weyourfeed.com/orden-confirmada?reference=${reference}`;
+    // URL de retorno - Usar endpoint API
+    const redirectUrl = `https://weyourfeed.com/api/order-confirmation?reference=${reference}&id=${reference}`;
 
     // Crear URL de pago Wompi
     const wompiParams = new URLSearchParams({
