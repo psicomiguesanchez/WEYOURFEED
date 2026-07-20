@@ -32,6 +32,17 @@
         .btn { padding: 0.75rem 1.5rem; background: linear-gradient(135deg, #FF6600 0%, #FF8800 100%); border: none; border-radius: 8px; color: #000; font-weight: 600; cursor: pointer; transition: all 0.3s ease; }
         .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(255, 102, 0, 0.3); }
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center; }
+        .modal.active { display: flex; }
+        .modal-content { background: rgba(20, 20, 32, 0.95); border: 1px solid rgba(255, 102, 0, 0.2); border-radius: 16px; padding: 2rem; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto; }
+        .modal-content h2 { color: #FF6600; margin-bottom: 1.5rem; }
+        .form-group { margin-bottom: 1.5rem; }
+        .form-group label { display: block; color: rgba(255,255,255,0.7); margin-bottom: 0.5rem; font-weight: 500; }
+        .form-group input, .form-group textarea { width: 100%; padding: 0.75rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,102,0,0.2); border-radius: 8px; color: #FFF; font-family: inherit; }
+        .form-group textarea { resize: vertical; min-height: 100px; }
+        .modal-buttons { display: flex; gap: 1rem; justify-content: flex-end; }
+        .btn-secondary { background: rgba(100,100,100,0.3); color: #FFF; border: 1px solid rgba(100,100,100,0.5); }
+        .btn-secondary:hover { background: rgba(100,100,100,0.5); }
     </style>
 </head>
 <body>
@@ -138,8 +149,36 @@
         </main>
     </div>
 
+    <!-- MODAL EDITAR PRODUCTO -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <h2>✏️ Editar Producto</h2>
+            <div class="form-group">
+                <label>Nombre</label>
+                <input type="text" id="editNombre" placeholder="Nombre del producto">
+            </div>
+            <div class="form-group">
+                <label>Categoría</label>
+                <input type="text" id="editCategoria" placeholder="Categoría">
+            </div>
+            <div class="form-group">
+                <label>Precio (PVP)</label>
+                <input type="number" id="editPrecio" placeholder="Precio" min="0">
+            </div>
+            <div class="form-group">
+                <label>Descripción</label>
+                <textarea id="editDescripcion" placeholder="Descripción del producto"></textarea>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn btn-secondary" onclick="closeEditModal()">Cancelar</button>
+                <button class="btn" onclick="saveEditProduct()">💾 Guardar</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let db;
+        let currentEditingProductId = null;
 
         async function initFirebase() {
             const response = await fetch('/api/firebase-config');
@@ -183,9 +222,48 @@
             snap.docs.forEach(d => {
                 const data = d.data();
                 const img = data.imagenBase64 ? `<img src="${data.imagenBase64}" style="width:50px; height:50px; border-radius:8px; object-fit:contain; background:#000;">` : '<div style="width:50px; height:50px; background:#333; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:0.8rem;">Sin img</div>';
-                html += `<tr><td style="display:flex; align-items:center; gap:0.75rem;">${img}<span>${data.nombre}</span></td><td>${data.categoriaId}</td><td>$${(data.precio || 0).toLocaleString('es-ES')}</td><td><button class="btn" style="padding: 0.5rem 1rem; font-size: 0.9rem;">Editar</button></td></tr>`;
+                html += `<tr><td style="display:flex; align-items:center; gap:0.75rem;">${img}<span>${data.nombre}</span></td><td>${data.categoriaId}</td><td>$${(data.precio || 0).toLocaleString('es-ES')}</td><td><button class="btn" style="padding: 0.5rem 1rem; font-size: 0.9rem;" onclick="openEditModal('${d.id}', '${data.nombre}', '${data.categoriaId}', ${data.precio || 0}, '${(data.descripcion || '').replace(/'/g, "\\'")}')"}>Editar</button></td></tr>`;
             });
             document.getElementById('productsTable').innerHTML = html || '<tr><td colspan="4" style="text-align: center;">Sin productos</td></tr>';
+        }
+
+        function openEditModal(productId, nombre, categoria, precio, descripcion) {
+            currentEditingProductId = productId;
+            document.getElementById('editNombre').value = nombre;
+            document.getElementById('editCategoria').value = categoria;
+            document.getElementById('editPrecio').value = precio;
+            document.getElementById('editDescripcion').value = descripcion;
+            document.getElementById('editModal').classList.add('active');
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').classList.remove('active');
+            currentEditingProductId = null;
+        }
+
+        async function saveEditProduct() {
+            if (!currentEditingProductId) return;
+            const nombre = document.getElementById('editNombre').value;
+            const categoria = document.getElementById('editCategoria').value;
+            const precio = parseInt(document.getElementById('editPrecio').value) || 0;
+            const descripcion = document.getElementById('editDescripcion').value;
+
+            if (!nombre || !categoria) {
+                alert('Nombre y categoría son requeridos');
+                return;
+            }
+
+            try {
+                await db.collection('productos').doc(currentEditingProductId).update({
+                    nombre, categoriaId: categoria, precio, descripcion
+                });
+                closeEditModal();
+                loadProducts();
+                loadDashboard();
+                alert('✅ Producto actualizado');
+            } catch (err) {
+                alert('❌ Error: ' + err.message);
+            }
         }
 
         async function loadOrders() {
