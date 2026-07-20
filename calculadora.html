@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Nutrición - WEYOURFEED</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;700&family=Inter:wght@400;500;600;700&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0A0A0A 0%, #1a1a2e 100%);
+            color: #FFFFFF;
+            font-family: 'Inter', sans-serif;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ========== HEADER ========== */
+        .header {
+            background: rgba(15, 15, 25, 0.7);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 102, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            padding: 1rem 0;
+        }
+
+        .logo {
+            font-family: 'Oswald', sans-serif;
+            font-size: 1.8rem;
+            font-weight: 700;
+            font-style: italic;
+            letter-spacing: 2px;
+        }
+
+        .logo-we { color: #FF6600; }
+        .logo-your { color: #FFFFFF; }
+        .logo-feed { color: #FF6600; }
+
+        /* ========== MAIN CONTAINER ========== */
+        .main-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 3rem 1.5rem;
+            animation: fadeInUp 0.8s ease-out;
+        }
+
+        .section-title {
+            font-family: 'Oswald', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            background: linear-gradient(135deg, #FF6600 0%, #FF8800 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 1rem;
+        }
+
+        .section-subtitle {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 1.1rem;
+            margin-bottom: 2.5rem;
+        }
+
+        /* ========== FORMULARIO ========== */
+        .form-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        @media (max-width: 768px) {
+            .form-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .form-group {
+            background: rgba(20, 20, 32, 0.4);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 102, 0, 0.15);
+            border-radius: 16px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-group:hover {
+            border-color: rgba(255, 102, 0, 0.3);
+            background: rgba(20, 20, 32, 0.6);
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            color: #FF6600;
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-input,
+        .form-select {
+            width: 100%;
+            padding: 0.875rem 1.25rem;
+            background: rgba(26, 26, 26, 0.6);
+            border: 1px solid rgba(255, 102, 0, 0.2);
+            border-radius: 12px;
+            color: white;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            margin-bottom: 1rem;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .form-input:focus,
+        .form-select:focus {
+            outline: none;
+            border-color: rgba(255, 102, 0, 0.6);
+            background: rgba(26, 26, 26, 0.9);
+            box-shadow: 0 0 20px rgba(255, 102, 0, 0.15);
+        }
+
+        .radio-group,
+        .checkbox-group {
+            display: flex;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+
+        .radio-item,
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            cursor: pointer;
+        }
+
+        .radio-item input,
+        .checkbox-item input {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: #FF6600;
+        }
+
+        .radio-item label,
+        .checkbox-item label {
+            cursor: pointer;
+        }
+
+        /* ========== BOTONES ========== */
+        .btn-calculate {
+            width: 100%;
+            padding: 1.25rem;
+            background: linear-gradient(135deg, #FF6600 0%, #FF8800 100%);
+            border: none;
+            border-radius: 14px;
+            color: #000;
+            font-weight: 700;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 1rem;
+        }
+
+        .btn-calculate:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 32px rgba(255, 102, 0, 0.3);
+        }
+
+        /* ========== RESULTADOS ========== */
+        .results-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+            animation: fadeInUp 0.8s ease-out 0.2s both;
+        }
+
+        .result-card {
+            background: rgba(20, 20, 32, 0.4);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 102, 0, 0.2);
+            border-radius: 16px;
+            padding: 2rem;
+            transition: all 0.3s ease;
+        }
+
+        .result-card:hover {
+            transform: translateY(-8px);
+            border-color: rgba(255, 102, 0, 0.5);
+            box-shadow: 0 12px 48px rgba(255, 102, 0, 0.15);
+        }
+
+        .result-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: #FF6600;
+        }
+
+        .result-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #FFFFFF;
+            margin-bottom: 0.5rem;
+        }
+
+        .result-unit {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.9rem;
+        }
+
+        .recommended-products {
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid rgba(255, 102, 0, 0.2);
+        }
+
+        .product-recommendation {
+            background: rgba(255, 102, 0, 0.08);
+            border: 1px solid rgba(255, 102, 0, 0.2);
+            border-radius: 12px;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .product-recommendation:hover {
+            background: rgba(255, 102, 0, 0.12);
+            border-color: rgba(255, 102, 0, 0.4);
+        }
+
+        .product-name {
+            font-weight: 700;
+            color: #FF6600;
+            margin-bottom: 0.5rem;
+        }
+
+        .product-amount {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.95rem;
+        }
+
+        .add-to-cart-btn {
+            width: 100%;
+            padding: 0.75rem;
+            background: rgba(255, 102, 0, 0.2);
+            border: 1px solid rgba(255, 102, 0, 0.4);
+            border-radius: 8px;
+            color: #FF6600;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 0.75rem;
+            transition: all 0.3s ease;
+        }
+
+        .add-to-cart-btn:hover {
+            background: rgba(255, 102, 0, 0.3);
+            border-color: rgba(255, 102, 0, 0.6);
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .nav-button {
+            padding: 0.75rem 1.5rem;
+            background: rgba(255, 102, 0, 0.1);
+            border: 1px solid rgba(255, 102, 0, 0.3);
+            border-radius: 12px;
+            color: #FF6600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .nav-button:hover {
+            background: rgba(255, 102, 0, 0.2);
+            border-color: rgba(255, 102, 0, 0.6);
+        }
+    </style>
+</head>
+<body>
+    <!-- HEADER -->
+    <header class="header">
+        <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+            <a href="/" style="text-decoration: none;">
+                <div class="logo">
+                    <span class="logo-we">WE</span><span class="logo-your">YOUR</span><span class="logo-feed">FEED</span>
+                </div>
+            </a>
+            <div style="display: flex; gap: 1rem; align-items: center;">
+                <a href="/" class="nav-button">← Catálogo</a>
+                <button onclick="toggleCart()" style="font-size: 1.5rem; cursor: pointer;">🛒</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN -->
+    <main class="main-container">
+        <h1 class="section-title">🏃 Calculadora de Nutrición</h1>
+        <p class="section-subtitle">Calcula carbos, sales e hidratantes según tu evento y características personales</p>
+
+        <!-- FORMULARIO -->
+        <div class="form-container">
+            <!-- COLUMNA 1: TIPO DE EVENTO Y DISTANCIA -->
+            <div class="form-group">
+                <label class="form-label">📍 Tipo de Evento</label>
+                <select id="eventType" class="form-select" onchange="updateDistanceOptions()">
+                    <option value="">Selecciona un evento</option>
+                    <option value="running">🏃 Running</option>
+                    <option value="ciclismo">🚴 Ciclismo</option>
+                    <option value="natacion">🏊 Natación</option>
+                    <option value="ironman-full">🥇 Iron Man Full (3.8km natación + 180km ciclismo + 42.2km running)</option>
+                    <option value="ironman-703">🥈 Iron Man 70.3 (1.9km natación + 90km ciclismo + 21.1km running)</option>
+                </select>
+
+                <label class="form-label">📏 Distancia (km)</label>
+                <input type="number" id="distance" class="form-input" placeholder="Ej: 10" min="0" step="0.1">
+
+                <label class="form-label">🌡️ Temperatura (°C)</label>
+                <input type="number" id="temperature" class="form-input" placeholder="Ej: 25" min="0" max="50" step="0.1" value="20">
+            </div>
+
+            <!-- COLUMNA 2: DATOS DEL PARTICIPANTE -->
+            <div class="form-group">
+                <label class="form-label">⚖️ Peso (kg)</label>
+                <input type="number" id="weight" class="form-input" placeholder="Ej: 70" min="0" step="0.1">
+
+                <label class="form-label">🎂 Edad</label>
+                <input type="number" id="age" class="form-input" placeholder="Ej: 30" min="0" max="120" step="1">
+
+                <label class="form-label">⏱️ Tiempo Estimado (horas)</label>
+                <input type="number" id="estimatedTime" class="form-input" placeholder="Ej: 2.5" min="0" step="0.5">
+            </div>
+        </div>
+
+        <!-- PREFERENCIAS -->
+        <div class="form-group" style="margin-bottom: 2rem;">
+            <label class="form-label">🛍️ Preferencia de Productos</label>
+            <div class="radio-group">
+                <div class="radio-item">
+                    <input type="radio" id="mixedBrands" name="productPreference" value="mixed" checked>
+                    <label for="mixedBrands">Mezcla de marcas</label>
+                </div>
+                <div class="radio-item">
+                    <input type="radio" id="singleBrand" name="productPreference" value="single">
+                    <label for="singleBrand">Una sola marca</label>
+                </div>
+            </div>
+
+            <div id="brandSelector" class="hidden">
+                <label class="form-label">Selecciona una marca</label>
+                <select id="selectedBrand" class="form-select">
+                    <option value="">Cargando marcas...</option>
+                </select>
+            </div>
+
+            <button class="btn-calculate" onclick="calculateNutrition()">
+                🧮 Calcular Nutrición
+            </button>
+        </div>
+
+        <!-- RESULTADOS -->
+        <div id="resultsContainer" class="results-container hidden">
+            <!-- CARBOHIDRATOS -->
+            <div class="result-card">
+                <div class="result-title">🍞 Carbohidratos</div>
+                <div class="result-value" id="carbsValue">0</div>
+                <div class="result-unit">gramos</div>
+                <div style="margin-top: 1rem; font-size: 0.9rem; color: rgba(255,255,255,0.7);">
+                    <strong>Recomendación:</strong> <span id="carbsRecommendation">Ingiere carbos cada 45 min</span>
+                </div>
+                <div class="recommended-products" id="carbsProducts"></div>
+            </div>
+
+            <!-- SALES -->
+            <div class="result-card">
+                <div class="result-title">🧂 Sales (Sodio)</div>
+                <div class="result-value" id="saltValue">0</div>
+                <div class="result-unit">miligramos (mg)</div>
+                <div style="margin-top: 1rem; font-size: 0.9rem; color: rgba(255,255,255,0.7);">
+                    <strong>Recomendación:</strong> <span id="saltRecommendation">Distribuye durante el evento</span>
+                </div>
+                <div class="recommended-products" id="saltProducts"></div>
+            </div>
+
+            <!-- HIDRATACIÓN -->
+            <div class="result-card">
+                <div class="result-title">💧 Hidratación</div>
+                <div class="result-value" id="hydrationValue">0</div>
+                <div class="result-unit">mililitros (ml)</div>
+                <div style="margin-top: 1rem; font-size: 0.9rem; color: rgba(255,255,255,0.7);">
+                    <strong>Recomendación:</strong> <span id="hydrationRecommendation">Bebe cada 15-20 minutos</span>
+                </div>
+                <div class="recommended-products" id="hydrationProducts"></div>
+            </div>
+        </div>
+
+        <!-- TABLA RESUMEN -->
+        <div id="summaryTable" class="hidden" style="margin-top: 3rem; background: rgba(20, 20, 32, 0.4); backdrop-filter: blur(10px); border: 1px solid rgba(255, 102, 0, 0.2); border-radius: 16px; padding: 2rem; animation: fadeInUp 0.8s ease-out 0.3s both;">
+            <h3 style="font-size: 1.5rem; margin-bottom: 1.5rem; color: #FF6600;">📋 Resumen del Plan</h3>
+            <div id="summaryContent"></div>
+        </div>
+    </main>
+
+    <script>
+        let db;
+        let products = [];
+        let brands = new Set();
+
+        async function initFirebase() {
+            try {
+                const response = await fetch('/api/firebase-config');
+                const config = await response.json();
+                if (firebase.apps.length === 0) {
+                    firebase.initializeApp(config);
+                }
+                db = firebase.firestore();
+                loadBrands();
+            } catch (error) {
+                console.error('Firebase error:', error);
+            }
+        }
+
+        async function loadBrands() {
+            try {
+                const snap = await db.collection('productos').get();
+                products = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+                products.forEach(p => {
+                    if (p.marca) brands.add(p.marca);
+                });
+
+                const brandSelect = document.getElementById('selectedBrand');
+                brandSelect.innerHTML = '<option value="">Selecciona una marca</option>' +
+                    Array.from(brands).map(b => `<option value="${b}">${b}</option>`).join('');
+            } catch (error) {
+                console.error('Error loading brands:', error);
+            }
+        }
+
+        function updateDistanceOptions() {
+            const eventType = document.getElementById('eventType').value;
+            const distanceInput = document.getElementById('distance');
+
+            const distances = {
+                'running': '10',
+                'ciclismo': '50',
+                'natacion': '2',
+                'ironman-full': '226',
+                'ironman-703': '113'
+            };
+
+            distanceInput.value = distances[eventType] || '';
+        }
+
+        document.querySelectorAll('input[name="productPreference"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                document.getElementById('brandSelector').classList.toggle('hidden', this.value === 'mixed');
+            });
+        });
+
+        function calculateNutrition() {
+            const eventType = document.getElementById('eventType').value;
+            const distance = parseFloat(document.getElementById('distance').value);
+            const temperature = parseFloat(document.getElementById('temperature').value);
+            const weight = parseFloat(document.getElementById('weight').value);
+            const age = parseFloat(document.getElementById('age').value);
+            const time = parseFloat(document.getElementById('estimatedTime').value);
+
+            if (!eventType || !distance || !weight || !age || !time) {
+                alert('Por favor completa todos los campos');
+                return;
+            }
+
+            // CÁLCULOS DE NUTRICIÓN
+            let pace = time / distance; // horas por km
+            let intensity = getIntensity(distance, time);
+
+            // CARBOHIDRATOS (g/hora según intensidad)
+            let carbsPerHour = intensity > 0.7 ? 60 : intensity > 0.5 ? 45 : 30;
+            let totalCarbs = carbsPerHour * time;
+
+            // SALES (mg de sodio)
+            let sweatRate = (weight * 0.5) + (temperature > 25 ? (temperature - 25) * 2 : 0); // ml/hora
+            let sodiumPerLiter = 500; // mg
+            let totalSodium = (sweatRate / 1000) * time * sodiumPerLiter;
+
+            // HIDRATACIÓN (ml)
+            let hydrationPerHour = weight * 7; // ml/hora base
+            let tempFactor = temperature > 25 ? 1 + ((temperature - 25) * 0.05) : 1;
+            let totalHydration = hydrationPerHour * time * tempFactor;
+
+            // MOSTRAR RESULTADOS
+            document.getElementById('resultsContainer').classList.remove('hidden');
+            document.getElementById('summaryTable').classList.remove('hidden');
+
+            document.getElementById('carbsValue').textContent = Math.round(totalCarbs);
+            document.getElementById('saltValue').textContent = Math.round(totalSodium);
+            document.getElementById('hydrationValue').textContent = Math.round(totalHydration);
+
+            // RECOMENDACIONES
+            document.getElementById('carbsRecommendation').textContent =
+                intensity > 0.7 ? '60g cada 45 min' : intensity > 0.5 ? '45g cada hora' : '30g cada 1.5 horas';
+
+            document.getElementById('saltRecommendation').textContent =
+                temperature > 25 ? 'Aumenta ingesta en clima cálido (200-300mg cada hora)' : 'Ingiere 200mg cada hora';
+
+            document.getElementById('hydrationRecommendation').textContent =
+                `${Math.round(sweatRate)}ml cada 15-20 minutos`;
+
+            // PRODUCTOS RECOMENDADOS
+            showRecommendedProducts(totalCarbs, totalSodium, totalHydration);
+
+            // RESUMEN
+            showSummary(eventType, distance, time, weight, temperature, totalCarbs, totalSodium, totalHydration);
+
+            window.scrollTo({ top: document.getElementById('resultsContainer').offsetTop - 100, behavior: 'smooth' });
+        }
+
+        function getIntensity(distance, time) {
+            let pace = time / distance;
+            if (pace < 0.03) return 0.9; // muy rápido
+            if (pace < 0.05) return 0.8;
+            if (pace < 0.1) return 0.7;
+            if (pace < 0.2) return 0.5;
+            return 0.3;
+        }
+
+        function showRecommendedProducts(carbs, sodium, hydration) {
+            const preference = document.querySelector('input[name="productPreference"]:checked').value;
+            const selectedBrand = preference === 'single' ? document.getElementById('selectedBrand').value : null;
+
+            let carbProducts = products.filter(p => {
+                if (selectedBrand && p.marca !== selectedBrand) return false;
+                return p.nombre?.toLowerCase().includes('carbo') || p.nombre?.toLowerCase().includes('energia');
+            }).slice(0, 2);
+
+            let saltProducts = products.filter(p => {
+                if (selectedBrand && p.marca !== selectedBrand) return false;
+                return p.nombre?.toLowerCase().includes('sal') || p.nombre?.toLowerCase().includes('electro');
+            }).slice(0, 2);
+
+            let hydrationProducts = products.filter(p => {
+                if (selectedBrand && p.marca !== selectedBrand) return false;
+                return p.nombre?.toLowerCase().includes('hidrat') || p.nombre?.toLowerCase().includes('bebida');
+            }).slice(0, 2);
+
+            document.getElementById('carbsProducts').innerHTML = carbProducts.length > 0 ?
+                '<div style="margin-top: 1rem;"><strong>Productos recomendados:</strong><br>' +
+                carbProducts.map(p => `<div style="margin-top: 0.5rem; font-size: 0.9rem;">${p.nombre}</div>`).join('') +
+                '</div>' : '';
+
+            document.getElementById('saltProducts').innerHTML = saltProducts.length > 0 ?
+                '<div style="margin-top: 1rem;"><strong>Productos recomendados:</strong><br>' +
+                saltProducts.map(p => `<div style="margin-top: 0.5rem; font-size: 0.9rem;">${p.nombre}</div>`).join('') +
+                '</div>' : '';
+
+            document.getElementById('hydrationProducts').innerHTML = hydrationProducts.length > 0 ?
+                '<div style="margin-top: 1rem;"><strong>Productos recomendados:</strong><br>' +
+                hydrationProducts.map(p => `<div style="margin-top: 0.5rem; font-size: 0.9rem;">${p.nombre}</div>`).join('') +
+                '</div>' : '';
+        }
+
+        function showSummary(eventType, distance, time, weight, temp, carbs, sodium, hydration) {
+            const events = {
+                'running': '🏃 Running',
+                'ciclismo': '🚴 Ciclismo',
+                'natacion': '🏊 Natación',
+                'ironman-full': '🥇 Iron Man Full',
+                'ironman-703': '🥈 Iron Man 70.3'
+            };
+
+            document.getElementById('summaryContent').innerHTML = `
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem;">
+                    <div style="padding: 1rem; background: rgba(255,102,0,0.08); border-radius: 12px;">
+                        <div style="font-weight: 700; color: #FF6600;">Evento</div>
+                        <div style="margin-top: 0.5rem;">${events[eventType]}</div>
+                    </div>
+                    <div style="padding: 1rem; background: rgba(255,102,0,0.08); border-radius: 12px;">
+                        <div style="font-weight: 700; color: #FF6600;">Distancia</div>
+                        <div style="margin-top: 0.5rem;">${distance} km</div>
+                    </div>
+                    <div style="padding: 1rem; background: rgba(255,102,0,0.08); border-radius: 12px;">
+                        <div style="font-weight: 700; color: #FF6600;">Tiempo</div>
+                        <div style="margin-top: 0.5rem;">${time.toFixed(1)} horas</div>
+                    </div>
+                    <div style="padding: 1rem; background: rgba(255,102,0,0.08); border-radius: 12px;">
+                        <div style="font-weight: 700; color: #FF6600;">Peso</div>
+                        <div style="margin-top: 0.5rem;">${weight} kg</div>
+                    </div>
+                    <div style="padding: 1rem; background: rgba(255,102,0,0.08); border-radius: 12px;">
+                        <div style="font-weight: 700; color: #FF6600;">Temperatura</div>
+                        <div style="margin-top: 0.5rem;">${temp}°C</div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 2rem; padding: 1.5rem; background: rgba(255,102,0,0.08); border-left: 4px solid #FF6600; border-radius: 8px;">
+                    <h4 style="margin-bottom: 1rem; color: #FF6600;">💡 Estrategia Nutricional</h4>
+                    <ul style="list-style: none; padding: 0;">
+                        <li style="margin-bottom: 0.75rem;">✓ <strong>Carbos:</strong> ${Math.round(carbs)}g total (${Math.round(carbs/time)}g/hora)</li>
+                        <li style="margin-bottom: 0.75rem;">✓ <strong>Sodio:</strong> ${Math.round(sodium)}mg total</li>
+                        <li style="margin-bottom: 0.75rem;">✓ <strong>Hidratación:</strong> ${Math.round(hydration)}ml total</li>
+                        <li>✓ <strong>Ingesta:</strong> Cada 15-20 minutos en pequeñas cantidades</li>
+                    </ul>
+                </div>
+            `;
+        }
+
+        function toggleCart() {
+            alert('Función de carrito aquí');
+        }
+
+        initFirebase();
+    </script>
+</body>
+</html>
