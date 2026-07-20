@@ -184,10 +184,23 @@
                 </div>
 
                 <!-- Formulario Cliente -->
-                <div style="margin-bottom:15px;">
-                    <input type="text" id="clientName" placeholder="Tu nombre" style="width:100%; padding:8px; margin-bottom:10px; background:#1a1a1a; border:1px solid #FF6600; border-radius:6px; color:#FFF;">
-                    <input type="email" id="clientEmail" placeholder="Tu email" style="width:100%; padding:8px; margin-bottom:10px; background:#1a1a1a; border:1px solid #FF6600; border-radius:6px; color:#FFF;">
-                    <input type="tel" id="clientPhone" placeholder="Tu teléfono" style="width:100%; padding:8px; background:#1a1a1a; border:1px solid #FF6600; border-radius:6px; color:#FFF;">
+                <div style="margin-bottom:15px; max-height:400px; overflow-y:auto;">
+                    <p style="color:#FF6600; font-weight:bold; margin-bottom:10px; font-size:14px;">📋 Datos Personales</p>
+                    <input type="text" id="clientName" placeholder="Nombre completo" style="width:100%; padding:8px; margin-bottom:8px; background:#1a1a1a; border:1px solid #FF6600; border-radius:6px; color:#FFF; font-size:13px;">
+                    <input type="email" id="clientEmail" placeholder="Email" style="width:100%; padding:8px; margin-bottom:8px; background:#1a1a1a; border:1px solid #FF6600; border-radius:6px; color:#FFF; font-size:13px;">
+                    <input type="tel" id="clientPhone" placeholder="Celular" style="width:100%; padding:8px; margin-bottom:15px; background:#1a1a1a; border:1px solid #FF6600; border-radius:6px; color:#FFF; font-size:13px;">
+
+                    <p style="color:#FF6600; font-weight:bold; margin-bottom:10px; font-size:14px;">🏠 Datos de Envío</p>
+                    <input type="text" id="clientCity" placeholder="Ciudad" style="width:100%; padding:8px; margin-bottom:8px; background:#1a1a1a; border:1px solid #FF6600; border-radius:6px; color:#FFF; font-size:13px;">
+                    <input type="text" id="clientAddress" placeholder="Dirección" style="width:100%; padding:8px; margin-bottom:8px; background:#1a1a1a; border:1px solid #FF6600; border-radius:6px; color:#FFF; font-size:13px;">
+                    <input type="text" id="clientBarrio" placeholder="Barrio o Conjunto" style="width:100%; padding:8px; margin-bottom:8px; background:#1a1a1a; border:1px solid #FF6600; border-radius:6px; color:#FFF; font-size:13px;">
+                    <input type="text" id="clientNumero" placeholder="Número de casa o Apto" style="width:100%; padding:8px; margin-bottom:15px; background:#1a1a1a; border:1px solid #FF6600; border-radius:6px; color:#FFF; font-size:13px;">
+
+                    <p style="color:#FF6600; font-weight:bold; margin-bottom:10px; font-size:14px;">📱 Preferencias</p>
+                    <label style="display:flex; align-items:center; color:#FFF; font-size:13px; margin-bottom:10px;">
+                        <input type="checkbox" id="clientPromo" style="margin-right:8px; width:16px; height:16px; cursor:pointer;">
+                        <span>Recibir descuentos por celular y email</span>
+                    </label>
                 </div>
 
                 <!-- Botón Pagar -->
@@ -380,12 +393,21 @@
                 return;
             }
 
+            // Datos personales
             const name = document.getElementById('clientName').value.trim();
             const email = document.getElementById('clientEmail').value.trim();
             const phone = document.getElementById('clientPhone').value.trim();
 
-            if (!name || !email || !phone) {
-                showNotification('❌ Completa todos tus datos', 'error');
+            // Datos de envío
+            const city = document.getElementById('clientCity').value.trim();
+            const address = document.getElementById('clientAddress').value.trim();
+            const barrio = document.getElementById('clientBarrio').value.trim();
+            const numero = document.getElementById('clientNumero').value.trim();
+            const promo = document.getElementById('clientPromo').checked;
+
+            // Validaciones
+            if (!name || !email || !phone || !city || !address || !barrio || !numero) {
+                showNotification('❌ Completa todos los datos personales y de envío', 'error');
                 return;
             }
 
@@ -400,13 +422,22 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         cart: appCart,
-                        customer: { name, email, phone }
+                        customer: { name, email, phone },
+                        shipping: { city, address, barrio, numero },
+                        promo: promo
                     })
                 });
 
                 const data = await response.json();
 
                 if (data.success) {
+                    // Guardar datos temporales para la página de confirmación
+                    sessionStorage.setItem('orderReference', data.reference);
+                    sessionStorage.setItem('orderCart', JSON.stringify(appCart));
+                    sessionStorage.setItem('orderCustomer', JSON.stringify({ name, email, phone }));
+                    sessionStorage.setItem('orderShipping', JSON.stringify({ city, address, barrio, numero }));
+                    sessionStorage.setItem('orderAmount', data.amount);
+
                     // Redirigir a Wompi
                     window.location.href = data.checkout_url;
                 } else {
