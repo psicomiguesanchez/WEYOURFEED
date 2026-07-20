@@ -220,6 +220,13 @@
 
         async function initializeFirebase() {
             try {
+                // Limpiar datos de sesión de checkout (importante para mobile)
+                sessionStorage.removeItem('orderReference');
+                sessionStorage.removeItem('orderCart');
+                sessionStorage.removeItem('orderCustomer');
+                sessionStorage.removeItem('orderShipping');
+                sessionStorage.removeItem('orderAmount');
+
                 const response = await fetch('/api/firebase-config');
                 if (!response.ok) throw new Error(`Config failed: ${response.status}`);
                 const firebaseConfig = await response.json();
