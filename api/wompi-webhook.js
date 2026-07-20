@@ -12,7 +12,7 @@ export default async function handler(req, res) {
 
   try {
     const event = req.body;
-    const wompiEventSecret = process.env.WOMPI_TEST_EVENT_SECRET || process.env.WOMPI_EVENT_SECRET;
+    const wompiEventSecret = process.env.WOMPI_EVENT_SECRET;
 
     // 1. VALIDAR FIRMA DEL EVENTO (Seguridad)
     const { properties, checksum } = event.signature;

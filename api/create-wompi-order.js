@@ -19,15 +19,12 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Datos incompletos' });
     }
 
-    // Configuración de Wompi - Intentar TEST primero, luego PROD
-    let WOMPI_PUBLIC_KEY = process.env.WOMPI_TEST_PUBLIC_KEY || process.env.WOMPI_PUBLIC_KEY;
-    let WOMPI_INTEGRITY_SECRET = process.env.WOMPI_TEST_INTEGRITY_SECRET || process.env.WOMPI_INTEGRITY_SECRET;
+    // Configuración de Wompi
+    const WOMPI_PUBLIC_KEY = process.env.WOMPI_PUBLIC_KEY;
+    const WOMPI_INTEGRITY_SECRET = process.env.WOMPI_INTEGRITY_SECRET;
 
     if (!WOMPI_PUBLIC_KEY || !WOMPI_INTEGRITY_SECRET) {
-      console.error('Wompi Keys Missing:', {
-        test: !!process.env.WOMPI_TEST_PUBLIC_KEY,
-        prod: !!process.env.WOMPI_PUBLIC_KEY
-      });
+      console.error('❌ Wompi Keys Missing - Verifica variables en Vercel');
       return res.status(500).json({ error: 'Wompi no configurado' });
     }
 
