@@ -3,647 +3,700 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculadora de Nutrición - WEYOURFEED</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <title>Calculadora PRO - WEYOURFEED</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;700&family=Inter:wght@400;500;600;700&display=swap');
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        html {
-            scroll-behavior: smooth;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
             background: linear-gradient(135deg, #0A0A0A 0%, #1a1a2e 100%);
-            color: #FFFFFF;
+            min-height: 100vh;
             font-family: 'Inter', sans-serif;
+            color: #FFF;
+            padding: 2rem;
         }
 
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
         }
 
-        /* ========== HEADER ========== */
         .header {
-            background: rgba(15, 15, 25, 0.7);
-            backdrop-filter: blur(20px);
-            border-bottom: 1px solid rgba(255, 102, 0, 0.1);
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-            padding: 1rem 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
         }
 
         .logo {
             font-family: 'Oswald', sans-serif;
             font-size: 1.8rem;
             font-weight: 700;
-            font-style: italic;
-            letter-spacing: 2px;
-        }
-
-        .logo-we { color: #FF6600; }
-        .logo-your { color: #FFFFFF; }
-        .logo-feed { color: #FF6600; }
-
-        /* ========== MAIN CONTAINER ========== */
-        .main-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 3rem 1.5rem;
-            animation: fadeInUp 0.8s ease-out;
-        }
-
-        .section-title {
-            font-family: 'Oswald', sans-serif;
-            font-size: 2.5rem;
-            font-weight: 700;
-            text-transform: uppercase;
             background: linear-gradient(135deg, #FF6600 0%, #FF8800 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
-            margin-bottom: 1rem;
         }
 
-        .section-subtitle {
-            color: rgba(255, 255, 255, 0.6);
-            font-size: 1.1rem;
-            margin-bottom: 2.5rem;
-        }
-
-        /* ========== FORMULARIO ========== */
-        .form-container {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 2rem;
-            margin-bottom: 2rem;
-        }
-
-        @media (max-width: 768px) {
-            .form-container {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        .form-group {
-            background: rgba(20, 20, 32, 0.4);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 102, 0, 0.15);
-            border-radius: 16px;
-            padding: 1.5rem;
-            transition: all 0.3s ease;
-        }
-
-        .form-group:hover {
-            border-color: rgba(255, 102, 0, 0.3);
-            background: rgba(20, 20, 32, 0.6);
-        }
-
-        .form-label {
-            display: block;
-            font-weight: 600;
-            margin-bottom: 0.75rem;
-            color: #FF6600;
-            font-size: 0.95rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .form-input,
-        .form-select {
-            width: 100%;
-            padding: 0.875rem 1.25rem;
-            background: rgba(26, 26, 26, 0.6);
-            border: 1px solid rgba(255, 102, 0, 0.2);
-            border-radius: 12px;
-            color: white;
-            font-size: 0.95rem;
-            transition: all 0.3s ease;
-            margin-bottom: 1rem;
-            font-family: 'Inter', sans-serif;
-        }
-
-        .form-input:focus,
-        .form-select:focus {
-            outline: none;
-            border-color: rgba(255, 102, 0, 0.6);
-            background: rgba(26, 26, 26, 0.9);
-            box-shadow: 0 0 20px rgba(255, 102, 0, 0.15);
-        }
-
-        .radio-group,
-        .checkbox-group {
-            display: flex;
-            gap: 1.5rem;
-            flex-wrap: wrap;
-            margin-bottom: 1rem;
-        }
-
-        .radio-item,
-        .checkbox-item {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            cursor: pointer;
-        }
-
-        .radio-item input,
-        .checkbox-item input {
-            width: 18px;
-            height: 18px;
-            cursor: pointer;
-            accent-color: #FF6600;
-        }
-
-        .radio-item label,
-        .checkbox-item label {
-            cursor: pointer;
-        }
-
-        /* ========== BOTONES ========== */
-        .btn-calculate {
-            width: 100%;
-            padding: 1.25rem;
-            background: linear-gradient(135deg, #FF6600 0%, #FF8800 100%);
+        .back-btn {
+            background: none;
             border: none;
-            border-radius: 14px;
-            color: #000;
-            font-weight: 700;
-            font-size: 1.1rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-top: 1rem;
-        }
-
-        .btn-calculate:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 12px 32px rgba(255, 102, 0, 0.3);
-        }
-
-        /* ========== RESULTADOS ========== */
-        .results-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 2rem;
-            margin-top: 3rem;
-            animation: fadeInUp 0.8s ease-out 0.2s both;
-        }
-
-        .result-card {
-            background: rgba(20, 20, 32, 0.4);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 102, 0, 0.2);
-            border-radius: 16px;
-            padding: 2rem;
-            transition: all 0.3s ease;
-        }
-
-        .result-card:hover {
-            transform: translateY(-8px);
-            border-color: rgba(255, 102, 0, 0.5);
-            box-shadow: 0 12px 48px rgba(255, 102, 0, 0.15);
-        }
-
-        .result-title {
-            font-size: 1.5rem;
-            font-weight: 700;
-            margin-bottom: 1rem;
             color: #FF6600;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
         }
 
-        .result-value {
+        .back-btn:hover { color: #FF8800; }
+
+        .step { display: none; animation: fadeIn 0.6s ease-out; }
+        .step.active { display: block; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .step-title {
+            font-family: 'Oswald', sans-serif;
             font-size: 2.5rem;
             font-weight: 700;
-            color: #FFFFFF;
-            margin-bottom: 0.5rem;
-        }
-
-        .result-unit {
-            color: rgba(255, 255, 255, 0.6);
-            font-size: 0.9rem;
-        }
-
-        .recommended-products {
-            margin-top: 2rem;
-            padding-top: 2rem;
-            border-top: 1px solid rgba(255, 102, 0, 0.2);
-        }
-
-        .product-recommendation {
-            background: rgba(255, 102, 0, 0.08);
-            border: 1px solid rgba(255, 102, 0, 0.2);
-            border-radius: 12px;
-            padding: 1.25rem;
             margin-bottom: 1rem;
+            color: #FF6600;
+        }
+
+        .card {
+            background: rgba(20, 20, 32, 0.6);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 102, 0, 0.2);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 2rem;
             transition: all 0.3s ease;
         }
 
-        .product-recommendation:hover {
-            background: rgba(255, 102, 0, 0.12);
+        .card:hover {
             border-color: rgba(255, 102, 0, 0.4);
         }
 
-        .product-name {
+        .upload-area {
+            border: 2px dashed rgba(255, 102, 0, 0.5);
+            border-radius: 12px;
+            padding: 3rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .upload-area:hover {
+            border-color: #FF6600;
+            background: rgba(255, 102, 0, 0.05);
+        }
+
+        .upload-area.dragover {
+            border-color: #FF6600;
+            background: rgba(255, 102, 0, 0.1);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            color: #FF6600;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 0.75rem;
+            background: rgba(30, 30, 45, 0.8);
+            border: 1.5px solid rgba(255, 102, 0, 0.2);
+            border-radius: 12px;
+            color: #FFF;
+            font-family: inherit;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #FF6600;
+            box-shadow: 0 0 20px rgba(255, 102, 0, 0.2);
+        }
+
+        .input-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+        }
+
+        .btn {
+            padding: 1rem 2rem;
+            background: linear-gradient(135deg, #FF6600 0%, #FF8800 100%);
+            border: none;
+            border-radius: 12px;
+            color: #000;
             font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 1rem;
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(255, 102, 0, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: rgba(255, 102, 0, 0.1);
+            color: #FF6600;
+            border: 1.5px solid #FF6600;
+            margin-right: 1rem;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 102, 0, 0.2);
+        }
+
+        .buttons {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .strategy-selector {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .strategy-btn {
+            padding: 1rem;
+            background: rgba(255, 102, 0, 0.1);
+            border: 2px solid rgba(255, 102, 0, 0.3);
+            border-radius: 12px;
+            color: #FFF;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+
+        .strategy-btn:hover {
+            border-color: #FF6600;
+            background: rgba(255, 102, 0, 0.2);
+        }
+
+        .strategy-btn.selected {
+            border-color: #FF6600;
+            background: rgba(255, 102, 0, 0.3);
+        }
+
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            background: rgba(255, 102, 0, 0.05);
+            border-left: 4px solid #FF6600;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+
+        .metric-label {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #FF6600;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 2rem;
+            font-size: 0.9rem;
+        }
+
+        th {
+            background: rgba(255, 102, 0, 0.08);
+            padding: 0.75rem;
+            text-align: left;
+            font-weight: 600;
+            color: #FF6600;
+            border-bottom: 1px solid rgba(255, 102, 0, 0.2);
+        }
+
+        td {
+            padding: 0.75rem;
+            border-bottom: 1px solid rgba(255, 102, 0, 0.1);
+        }
+
+        tr:hover {
+            background: rgba(255, 102, 0, 0.05);
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-bottom: 2rem;
+        }
+
+        .alert {
+            background: rgba(255, 102, 0, 0.1);
+            border-left: 4px solid #FF6600;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .alert h3 {
             color: #FF6600;
             margin-bottom: 0.5rem;
         }
 
-        .product-amount {
-            color: rgba(255, 255, 255, 0.8);
-            font-size: 0.95rem;
-        }
-
-        .add-to-cart-btn {
-            width: 100%;
-            padding: 0.75rem;
-            background: rgba(255, 102, 0, 0.2);
-            border: 1px solid rgba(255, 102, 0, 0.4);
-            border-radius: 8px;
-            color: #FF6600;
-            font-weight: 600;
-            cursor: pointer;
-            margin-top: 0.75rem;
-            transition: all 0.3s ease;
-        }
-
-        .add-to-cart-btn:hover {
-            background: rgba(255, 102, 0, 0.3);
-            border-color: rgba(255, 102, 0, 0.6);
-        }
-
-        .hidden {
-            display: none;
-        }
-
-        .nav-button {
-            padding: 0.75rem 1.5rem;
-            background: rgba(255, 102, 0, 0.1);
-            border: 1px solid rgba(255, 102, 0, 0.3);
-            border-radius: 12px;
-            color: #FF6600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-decoration: none;
-            font-weight: 600;
-        }
-
-        .nav-button:hover {
-            background: rgba(255, 102, 0, 0.2);
-            border-color: rgba(255, 102, 0, 0.6);
+        @media (max-width: 768px) {
+            .step-title { font-size: 1.8rem; }
+            .strategy-selector { grid-template-columns: 1fr; }
+            .buttons { flex-direction: column; }
+            .btn { width: 100%; }
+            table { font-size: 0.8rem; }
+            th, td { padding: 0.5rem; }
         }
     </style>
 </head>
 <body>
-    <!-- HEADER -->
-    <header class="header">
-        <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-            <a href="/" style="text-decoration: none;">
-                <div class="logo">
-                    <span class="logo-we">WE</span><span class="logo-your">YOUR</span><span class="logo-feed">FEED</span>
-                </div>
-            </a>
-            <div style="display: flex; gap: 1rem; align-items: center;">
-                <a href="/" class="nav-button">← Catálogo</a>
-                <button onclick="toggleCart()" style="font-size: 1.5rem; cursor: pointer;">🛒</button>
-            </div>
+    <div class="container">
+        <div class="header">
+            <div class="logo">🏃 ESTRATEGIA DE CARRERA</div>
+            <button class="back-btn" onclick="window.location.href='/'">← Volver</button>
         </div>
-    </header>
 
-    <!-- MAIN -->
-    <main class="main-container">
-        <h1 class="section-title">🏃 Calculadora de Nutrición</h1>
-        <p class="section-subtitle">Calcula carbos, sales e hidratantes según tu evento y características personales</p>
+        <!-- PASO 1: CARGAR GPX -->
+        <div class="step active" id="step1">
+            <h1 class="step-title">Paso 1 · Tu Recorrido</h1>
+            <p style="color: rgba(255,255,255,0.7); font-size: 1.1rem; margin-bottom: 2rem;">Sube el archivo GPX de tu carrera</p>
 
-        <!-- FORMULARIO -->
-        <div class="form-container">
-            <!-- COLUMNA 1: TIPO DE EVENTO Y DISTANCIA -->
-            <div class="form-group">
-                <label class="form-label">📍 Tipo de Evento</label>
-                <select id="eventType" class="form-select" onchange="updateDistanceOptions()">
-                    <option value="">Selecciona un evento</option>
-                    <option value="running">🏃 Running</option>
-                    <option value="ciclismo">🚴 Ciclismo</option>
-                    <option value="natacion">🏊 Natación</option>
-                    <option value="ironman-full">🥇 Iron Man Full (3.8km natación + 180km ciclismo + 42.2km running)</option>
-                    <option value="ironman-703">🥈 Iron Man 70.3 (1.9km natación + 90km ciclismo + 21.1km running)</option>
-                </select>
+            <div class="card">
+                <div class="upload-area" id="uploadArea">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">📤</div>
+                    <p style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem;">Arrastra tu GPX aquí</p>
+                    <p style="color: rgba(255,255,255,0.6);">o haz click para seleccionar</p>
+                    <input type="file" id="gpxFile" accept=".gpx" style="display: none;">
+                </div>
 
-                <label class="form-label">📏 Distancia (km)</label>
-                <input type="number" id="distance" class="form-input" placeholder="Ej: 10" min="0" step="0.1">
-
-                <label class="form-label">🌡️ Temperatura (°C)</label>
-                <input type="number" id="temperature" class="form-input" placeholder="Ej: 25" min="0" max="50" step="0.1" value="20">
+                <div style="margin-top: 2rem;">
+                    <label>O carga un evento predefinido:</label>
+                    <select id="predefinedEvent">
+                        <option value="">Seleccionar evento...</option>
+                        <option value="media">Media Maratón (21.1 km)</option>
+                        <option value="maraton">Maratón (42.2 km)</option>
+                        <option value="trail">Trail 30km</option>
+                        <option value="ultra">Ultra 50km</option>
+                    </select>
+                </div>
             </div>
 
-            <!-- COLUMNA 2: DATOS DEL PARTICIPANTE -->
-            <div class="form-group">
-                <label class="form-label">⚖️ Peso (kg)</label>
-                <input type="number" id="weight" class="form-input" placeholder="Ej: 70" min="0" step="0.1">
-
-                <label class="form-label">🎂 Edad</label>
-                <input type="number" id="age" class="form-input" placeholder="Ej: 30" min="0" max="120" step="1">
-
-                <label class="form-label">⏱️ Tiempo Estimado (horas)</label>
-                <input type="number" id="estimatedTime" class="form-input" placeholder="Ej: 2.5" min="0" step="0.5">
+            <div class="buttons">
+                <button class="btn" onclick="goToStep(2)" id="nextBtn1" disabled>Siguiente →</button>
             </div>
         </div>
 
-        <!-- PREFERENCIAS -->
-        <div class="form-group" style="margin-bottom: 2rem;">
-            <label class="form-label">🛍️ Preferencia de Productos</label>
-            <div class="radio-group">
-                <div class="radio-item">
-                    <input type="radio" id="mixedBrands" name="productPreference" value="mixed" checked>
-                    <label for="mixedBrands">Mezcla de marcas</label>
+        <!-- PASO 2: OBJETIVO Y DATOS -->
+        <div class="step" id="step2">
+            <h1 class="step-title">Paso 2 · Tu Objetivo</h1>
+            <p style="color: rgba(255,255,255,0.7); font-size: 1.1rem; margin-bottom: 2rem;">¿En cuánto quieres correr?</p>
+
+            <div class="card">
+                <div class="input-row">
+                    <div class="form-group">
+                        <label>Horas</label>
+                        <input type="number" id="hours" placeholder="1" min="0" max="12">
+                    </div>
+                    <div class="form-group">
+                        <label>Minutos</label>
+                        <input type="number" id="minutes" placeholder="30" min="0" max="59">
+                    </div>
+                    <div class="form-group">
+                        <label>Segundos</label>
+                        <input type="number" id="seconds" placeholder="0" min="0" max="59">
+                    </div>
                 </div>
-                <div class="radio-item">
-                    <input type="radio" id="singleBrand" name="productPreference" value="single">
-                    <label for="singleBrand">Una sola marca</label>
+
+                <div class="input-row">
+                    <div class="form-group">
+                        <label>Peso (kg)</label>
+                        <input type="number" id="weight" placeholder="70" min="30">
+                    </div>
+                    <div class="form-group">
+                        <label>Temperatura (°C)</label>
+                        <input type="number" id="temperature" placeholder="20" min="0" max="50">
+                    </div>
+                </div>
+
+                <div class="alert">
+                    <h3>⚠️ Info del Recorrido</h3>
+                    <p>Distancia: <strong id="distanceInfo">-</strong> km | Elevación: <strong id="elevationInfo">-</strong> m</p>
                 </div>
             </div>
 
-            <div id="brandSelector" class="hidden">
-                <label class="form-label">Selecciona una marca</label>
-                <select id="selectedBrand" class="form-select">
-                    <option value="">Cargando marcas...</option>
-                </select>
-            </div>
-
-            <button class="btn-calculate" onclick="calculateNutrition()">
-                🧮 Calcular Nutrición
-            </button>
-        </div>
-
-        <!-- RESULTADOS -->
-        <div id="resultsContainer" class="results-container hidden">
-            <!-- CARBOHIDRATOS -->
-            <div class="result-card">
-                <div class="result-title">🍞 Carbohidratos</div>
-                <div class="result-value" id="carbsValue">0</div>
-                <div class="result-unit">gramos</div>
-                <div style="margin-top: 1rem; font-size: 0.9rem; color: rgba(255,255,255,0.7);">
-                    <strong>Recomendación:</strong> <span id="carbsRecommendation">Ingiere carbos cada 45 min</span>
-                </div>
-                <div class="recommended-products" id="carbsProducts"></div>
-            </div>
-
-            <!-- SALES -->
-            <div class="result-card">
-                <div class="result-title">🧂 Sales (Sodio)</div>
-                <div class="result-value" id="saltValue">0</div>
-                <div class="result-unit">miligramos (mg)</div>
-                <div style="margin-top: 1rem; font-size: 0.9rem; color: rgba(255,255,255,0.7);">
-                    <strong>Recomendación:</strong> <span id="saltRecommendation">Distribuye durante el evento</span>
-                </div>
-                <div class="recommended-products" id="saltProducts"></div>
-            </div>
-
-            <!-- HIDRATACIÓN -->
-            <div class="result-card">
-                <div class="result-title">💧 Hidratación</div>
-                <div class="result-value" id="hydrationValue">0</div>
-                <div class="result-unit">mililitros (ml)</div>
-                <div style="margin-top: 1rem; font-size: 0.9rem; color: rgba(255,255,255,0.7);">
-                    <strong>Recomendación:</strong> <span id="hydrationRecommendation">Bebe cada 15-20 minutos</span>
-                </div>
-                <div class="recommended-products" id="hydrationProducts"></div>
+            <div class="buttons">
+                <button class="btn btn-secondary" onclick="goToStep(1)">← Atrás</button>
+                <button class="btn" onclick="goToStep(3)">Generar Estrategia →</button>
             </div>
         </div>
 
-        <!-- TABLA RESUMEN -->
-        <div id="summaryTable" class="hidden" style="margin-top: 3rem; background: rgba(20, 20, 32, 0.4); backdrop-filter: blur(10px); border: 1px solid rgba(255, 102, 0, 0.2); border-radius: 16px; padding: 2rem; animation: fadeInUp 0.8s ease-out 0.3s both;">
-            <h3 style="font-size: 1.5rem; margin-bottom: 1.5rem; color: #FF6600;">📋 Resumen del Plan</h3>
-            <div id="summaryContent"></div>
+        <!-- PASO 3: ESTRATEGIA -->
+        <div class="step" id="step3">
+            <h1 class="step-title">Paso 3 · Tu Estrategia</h1>
+            <p style="color: rgba(255,255,255,0.7); font-size: 1.1rem; margin-bottom: 2rem;">Elige tu estrategia de carrera</p>
+
+            <div class="card">
+                <h2 style="color: #FF6600; margin-bottom: 1.5rem;">⚡ Estrategias de Carrera</h2>
+                <div class="strategy-selector">
+                    <button class="strategy-btn" onclick="selectStrategy('constant', this)">
+                        <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">📊</div>
+                        <strong>Esfuerzo Constante</strong>
+                        <p style="font-size: 0.8rem; color: rgba(255,255,255,0.6); margin-top: 0.5rem;">Ritmo parejo todo el recorrido</p>
+                    </button>
+                    <button class="strategy-btn" onclick="selectStrategy('negative', this)">
+                        <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">📈</div>
+                        <strong>Negative Split</strong>
+                        <p style="font-size: 0.8rem; color: rgba(255,255,255,0.6); margin-top: 0.5rem;">Empieza lento, termina rápido</p>
+                    </button>
+                    <button class="strategy-btn" onclick="selectStrategy('conservative', this)">
+                        <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🏔️</div>
+                        <strong>Conservador</strong>
+                        <p style="font-size: 0.8rem; color: rgba(255,255,255,0.6); margin-top: 0.5rem;">Ahorrar en subidas, acelerar en bajadas</p>
+                    </button>
+                </div>
+            </div>
+
+            <!-- PERFIL DE ELEVACIÓN -->
+            <div class="card">
+                <h2 style="color: #FF6600; margin-bottom: 1.5rem;">📈 Perfil de Elevación</h2>
+                <div class="chart-container">
+                    <canvas id="elevationChart"></canvas>
+                </div>
+            </div>
+
+            <!-- RESUMEN -->
+            <div class="card">
+                <h2 style="color: #FF6600; margin-bottom: 1.5rem;">📊 Resumen de tu Carrera</h2>
+                <div id="summary">
+                    <div class="metric">
+                        <span class="metric-label">Distancia Total</span>
+                        <span class="metric-value" id="totalDist">-</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Tiempo Objetivo</span>
+                        <span class="metric-value" id="targetTime">-</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Ritmo Medio</span>
+                        <span class="metric-value" id="avgPace">-</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Ganancia Elevación</span>
+                        <span class="metric-value" id="elevation">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TABLA DE PARCIALES -->
+            <div class="card">
+                <h2 style="color: #FF6600; margin-bottom: 1.5rem;">⏱️ Parciales Kilómetro a Kilómetro</h2>
+                <div style="overflow-x: auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>km</th>
+                                <th>Distancia</th>
+                                <th>Elevación</th>
+                                <th>Pendiente</th>
+                                <th>Ritmo (min/km)</th>
+                                <th>Tiempo Acum</th>
+                                <th>Margen</th>
+                            </tr>
+                        </thead>
+                        <tbody id="splitsTable">
+                            <tr><td colspan="7" style="text-align: center;">Calculando...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- PLAN DE NUTRICIÓN -->
+            <div class="card">
+                <h2 style="color: #FF6600; margin-bottom: 1.5rem;">🥗 Plan de Nutrición</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Hora</th>
+                            <th>Geles</th>
+                            <th>Electrolitos</th>
+                            <th>Hidratación (ml)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="nutritionTable">
+                        <tr><td colspan="4" style="text-align: center;">Calculando...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="buttons">
+                <button class="btn btn-secondary" onclick="goToStep(2)">← Cambiar objetivo</button>
+                <button class="btn" onclick="downloadStrategy()">📥 Descargar estrategia</button>
+            </div>
         </div>
-    </main>
+    </div>
 
     <script>
-        let db;
-        let products = [];
-        let brands = new Set();
+        let gpxData = null;
+        let selectedStrategy = null;
+        let raceData = {
+            distance: 0,
+            elevation: 0,
+            segments: []
+        };
 
-        async function initFirebase() {
-            try {
-                const response = await fetch('/api/firebase-config');
-                const config = await response.json();
-                if (firebase.apps.length === 0) {
-                    firebase.initializeApp(config);
-                }
-                db = firebase.firestore();
-                loadBrands();
-            } catch (error) {
-                console.error('Firebase error:', error);
-            }
-        }
+        const uploadArea = document.getElementById('uploadArea');
+        const gpxFile = document.getElementById('gpxFile');
 
-        async function loadBrands() {
-            try {
-                const snap = await db.collection('productos').get();
-                products = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-                products.forEach(p => {
-                    if (p.marca) brands.add(p.marca);
-                });
-
-                const brandSelect = document.getElementById('selectedBrand');
-                brandSelect.innerHTML = '<option value="">Selecciona una marca</option>' +
-                    Array.from(brands).map(b => `<option value="${b}">${b}</option>`).join('');
-            } catch (error) {
-                console.error('Error loading brands:', error);
-            }
-        }
-
-        function updateDistanceOptions() {
-            const eventType = document.getElementById('eventType').value;
-            const distanceInput = document.getElementById('distance');
-
-            const distances = {
-                'running': '10',
-                'ciclismo': '50',
-                'natacion': '2',
-                'ironman-full': '226',
-                'ironman-703': '113'
-            };
-
-            distanceInput.value = distances[eventType] || '';
-        }
-
-        document.querySelectorAll('input[name="productPreference"]').forEach(radio => {
-            radio.addEventListener('change', function() {
-                document.getElementById('brandSelector').classList.toggle('hidden', this.value === 'mixed');
-            });
+        uploadArea.addEventListener('click', () => gpxFile.click());
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
         });
+        uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('dragover'));
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            handleGPXUpload(e.dataTransfer.files[0]);
+        });
+        gpxFile.addEventListener('change', (e) => handleGPXUpload(e.target.files[0]));
 
-        function calculateNutrition() {
-            const eventType = document.getElementById('eventType').value;
-            const distance = parseFloat(document.getElementById('distance').value);
-            const temperature = parseFloat(document.getElementById('temperature').value);
-            const weight = parseFloat(document.getElementById('weight').value);
-            const age = parseFloat(document.getElementById('age').value);
-            const time = parseFloat(document.getElementById('estimatedTime').value);
-
-            if (!eventType || !distance || !weight || !age || !time) {
-                alert('Por favor completa todos los campos');
-                return;
-            }
-
-            // CÁLCULOS DE NUTRICIÓN
-            let pace = time / distance; // horas por km
-            let intensity = getIntensity(distance, time);
-
-            // CARBOHIDRATOS (g/hora según intensidad)
-            let carbsPerHour = intensity > 0.7 ? 60 : intensity > 0.5 ? 45 : 30;
-            let totalCarbs = carbsPerHour * time;
-
-            // SALES (mg de sodio)
-            let sweatRate = (weight * 0.5) + (temperature > 25 ? (temperature - 25) * 2 : 0); // ml/hora
-            let sodiumPerLiter = 500; // mg
-            let totalSodium = (sweatRate / 1000) * time * sodiumPerLiter;
-
-            // HIDRATACIÓN (ml)
-            let hydrationPerHour = weight * 7; // ml/hora base
-            let tempFactor = temperature > 25 ? 1 + ((temperature - 25) * 0.05) : 1;
-            let totalHydration = hydrationPerHour * time * tempFactor;
-
-            // MOSTRAR RESULTADOS
-            document.getElementById('resultsContainer').classList.remove('hidden');
-            document.getElementById('summaryTable').classList.remove('hidden');
-
-            document.getElementById('carbsValue').textContent = Math.round(totalCarbs);
-            document.getElementById('saltValue').textContent = Math.round(totalSodium);
-            document.getElementById('hydrationValue').textContent = Math.round(totalHydration);
-
-            // RECOMENDACIONES
-            document.getElementById('carbsRecommendation').textContent =
-                intensity > 0.7 ? '60g cada 45 min' : intensity > 0.5 ? '45g cada hora' : '30g cada 1.5 horas';
-
-            document.getElementById('saltRecommendation').textContent =
-                temperature > 25 ? 'Aumenta ingesta en clima cálido (200-300mg cada hora)' : 'Ingiere 200mg cada hora';
-
-            document.getElementById('hydrationRecommendation').textContent =
-                `${Math.round(sweatRate)}ml cada 15-20 minutos`;
-
-            // PRODUCTOS RECOMENDADOS
-            showRecommendedProducts(totalCarbs, totalSodium, totalHydration);
-
-            // RESUMEN
-            showSummary(eventType, distance, time, weight, temperature, totalCarbs, totalSodium, totalHydration);
-
-            window.scrollTo({ top: document.getElementById('resultsContainer').offsetTop - 100, behavior: 'smooth' });
+        async function handleGPXUpload(file) {
+            const text = await file.text();
+            parseGPX(text);
         }
 
-        function getIntensity(distance, time) {
-            let pace = time / distance;
-            if (pace < 0.03) return 0.9; // muy rápido
-            if (pace < 0.05) return 0.8;
-            if (pace < 0.1) return 0.7;
-            if (pace < 0.2) return 0.5;
-            return 0.3;
-        }
+        function parseGPX(gpxText) {
+            const parser = new DOMParser();
+            const gpxDoc = parser.parseFromString(gpxText, 'text/xml');
+            const trkpts = gpxDoc.querySelectorAll('trkpt');
 
-        function showRecommendedProducts(carbs, sodium, hydration) {
-            const preference = document.querySelector('input[name="productPreference"]:checked').value;
-            const selectedBrand = preference === 'single' ? document.getElementById('selectedBrand').value : null;
+            let totalDist = 0;
+            let totalElevation = 0;
+            let prevLat, prevLon, prevEle;
+            const segments = [];
 
-            let carbProducts = products.filter(p => {
-                if (selectedBrand && p.marca !== selectedBrand) return false;
-                return p.nombre?.toLowerCase().includes('carbo') || p.nombre?.toLowerCase().includes('energia');
-            }).slice(0, 2);
+            trkpts.forEach((trkpt, idx) => {
+                const lat = parseFloat(trkpt.getAttribute('lat'));
+                const lon = parseFloat(trkpt.getAttribute('lon'));
+                const ele = parseFloat(trkpt.querySelector('ele')?.textContent || 0);
 
-            let saltProducts = products.filter(p => {
-                if (selectedBrand && p.marca !== selectedBrand) return false;
-                return p.nombre?.toLowerCase().includes('sal') || p.nombre?.toLowerCase().includes('electro');
-            }).slice(0, 2);
+                if (idx > 0 && prevLat && prevLon) {
+                    const dist = haversine(prevLat, prevLon, lat, lon);
+                    const eleDiff = ele - prevEle;
+                    totalDist += dist;
+                    if (eleDiff > 0) totalElevation += eleDiff;
 
-            let hydrationProducts = products.filter(p => {
-                if (selectedBrand && p.marca !== selectedBrand) return false;
-                return p.nombre?.toLowerCase().includes('hidrat') || p.nombre?.toLowerCase().includes('bebida');
-            }).slice(0, 2);
+                    segments.push({
+                        distance: totalDist,
+                        elevation: totalElevation,
+                        pace: 0
+                    });
+                }
+                prevLat = lat;
+                prevLon = lon;
+                prevEle = ele;
+            });
 
-            document.getElementById('carbsProducts').innerHTML = carbProducts.length > 0 ?
-                '<div style="margin-top: 1rem;"><strong>Productos recomendados:</strong><br>' +
-                carbProducts.map(p => `<div style="margin-top: 0.5rem; font-size: 0.9rem;">${p.nombre}</div>`).join('') +
-                '</div>' : '';
-
-            document.getElementById('saltProducts').innerHTML = saltProducts.length > 0 ?
-                '<div style="margin-top: 1rem;"><strong>Productos recomendados:</strong><br>' +
-                saltProducts.map(p => `<div style="margin-top: 0.5rem; font-size: 0.9rem;">${p.nombre}</div>`).join('') +
-                '</div>' : '';
-
-            document.getElementById('hydrationProducts').innerHTML = hydrationProducts.length > 0 ?
-                '<div style="margin-top: 1rem;"><strong>Productos recomendados:</strong><br>' +
-                hydrationProducts.map(p => `<div style="margin-top: 0.5rem; font-size: 0.9rem;">${p.nombre}</div>`).join('') +
-                '</div>' : '';
-        }
-
-        function showSummary(eventType, distance, time, weight, temp, carbs, sodium, hydration) {
-            const events = {
-                'running': '🏃 Running',
-                'ciclismo': '🚴 Ciclismo',
-                'natacion': '🏊 Natación',
-                'ironman-full': '🥇 Iron Man Full',
-                'ironman-703': '🥈 Iron Man 70.3'
+            raceData = {
+                distance: totalDist,
+                elevation: totalElevation,
+                segments: segments
             };
 
-            document.getElementById('summaryContent').innerHTML = `
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem;">
-                    <div style="padding: 1rem; background: rgba(255,102,0,0.08); border-radius: 12px;">
-                        <div style="font-weight: 700; color: #FF6600;">Evento</div>
-                        <div style="margin-top: 0.5rem;">${events[eventType]}</div>
-                    </div>
-                    <div style="padding: 1rem; background: rgba(255,102,0,0.08); border-radius: 12px;">
-                        <div style="font-weight: 700; color: #FF6600;">Distancia</div>
-                        <div style="margin-top: 0.5rem;">${distance} km</div>
-                    </div>
-                    <div style="padding: 1rem; background: rgba(255,102,0,0.08); border-radius: 12px;">
-                        <div style="font-weight: 700; color: #FF6600;">Tiempo</div>
-                        <div style="margin-top: 0.5rem;">${time.toFixed(1)} horas</div>
-                    </div>
-                    <div style="padding: 1rem; background: rgba(255,102,0,0.08); border-radius: 12px;">
-                        <div style="font-weight: 700; color: #FF6600;">Peso</div>
-                        <div style="margin-top: 0.5rem;">${weight} kg</div>
-                    </div>
-                    <div style="padding: 1rem; background: rgba(255,102,0,0.08); border-radius: 12px;">
-                        <div style="font-weight: 700; color: #FF6600;">Temperatura</div>
-                        <div style="margin-top: 0.5rem;">${temp}°C</div>
-                    </div>
-                </div>
-
-                <div style="margin-top: 2rem; padding: 1.5rem; background: rgba(255,102,0,0.08); border-left: 4px solid #FF6600; border-radius: 8px;">
-                    <h4 style="margin-bottom: 1rem; color: #FF6600;">💡 Estrategia Nutricional</h4>
-                    <ul style="list-style: none; padding: 0;">
-                        <li style="margin-bottom: 0.75rem;">✓ <strong>Carbos:</strong> ${Math.round(carbs)}g total (${Math.round(carbs/time)}g/hora)</li>
-                        <li style="margin-bottom: 0.75rem;">✓ <strong>Sodio:</strong> ${Math.round(sodium)}mg total</li>
-                        <li style="margin-bottom: 0.75rem;">✓ <strong>Hidratación:</strong> ${Math.round(hydration)}ml total</li>
-                        <li>✓ <strong>Ingesta:</strong> Cada 15-20 minutos en pequeñas cantidades</li>
-                    </ul>
-                </div>
-            `;
+            document.getElementById('distanceInfo').textContent = totalDist.toFixed(2);
+            document.getElementById('elevationInfo').textContent = totalElevation.toFixed(0);
+            document.getElementById('nextBtn1').disabled = false;
         }
 
-        function toggleCart() {
-            alert('Función de carrito aquí');
+        function haversine(lat1, lon1, lat2, lon2) {
+            const R = 6371;
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLon/2) * Math.sin(dLon/2);
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
         }
 
-        initFirebase();
+        function goToStep(step) {
+            document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+            document.getElementById('step' + step).classList.add('active');
+            if (step === 3) generateStrategy();
+        }
+
+        function selectStrategy(strategy, element) {
+            selectedStrategy = strategy;
+            document.querySelectorAll('.strategy-btn').forEach(b => b.classList.remove('selected'));
+            element.classList.add('selected');
+        }
+
+        function generateStrategy() {
+            const hours = parseInt(document.getElementById('hours').value) || 1;
+            const minutes = parseInt(document.getElementById('minutes').value) || 30;
+            const totalMinutes = hours * 60 + minutes;
+            const totalHours = totalMinutes / 60;
+
+            const distance = raceData.distance;
+            const elevation = raceData.elevation;
+            const avgPace = totalMinutes / distance;
+
+            // Mostrar resumen
+            document.getElementById('totalDist').textContent = distance.toFixed(2) + ' km';
+            document.getElementById('targetTime').textContent = `${hours}:${String(minutes).padStart(2, '0')}:00`;
+            const paceMin = Math.floor(avgPace);
+            const paceSec = Math.round((avgPace % 1) * 60);
+            document.getElementById('avgPace').textContent = `${paceMin}:${String(paceSec).padStart(2, '0')}/km`;
+            document.getElementById('elevation').textContent = elevation.toFixed(0) + ' m';
+
+            // Generar tabla de parciales
+            generateSplits(distance, totalMinutes, selectedStrategy, elevation);
+
+            // Generar plan de nutrición
+            generateNutrition(totalHours);
+
+            // Gráfico de elevación
+            drawElevationChart();
+        }
+
+        function generateSplits(distance, totalMinutes, strategy, elevation) {
+            let html = '';
+            const segments = Math.floor(distance);
+            const timePerKm = totalMinutes / distance;
+            let accTime = 0;
+
+            for (let km = 1; km <= segments; km++) {
+                let pace = timePerKm;
+
+                if (strategy === 'conservative') {
+                    // Ajustar por pendiente (simplificado)
+                    const slopeAdjustment = (elevation / distance) > 4 ? 0.1 : -0.05;
+                    pace += slopeAdjustment;
+                } else if (strategy === 'negative') {
+                    // Más lento al inicio, más rápido al final
+                    const progress = km / segments;
+                    pace = timePerKm * (1 + (1 - progress) * 0.15);
+                }
+
+                accTime += pace;
+                const hours = Math.floor(accTime / 60);
+                const mins = Math.floor(accTime % 60);
+                const margin = (totalMinutes - accTime).toFixed(1);
+
+                html += `
+                    <tr>
+                        <td>${km}</td>
+                        <td>${km.toFixed(2)} km</td>
+                        <td>${(elevation / segments).toFixed(0)} m</td>
+                        <td>${((elevation / segments) / 1).toFixed(1)}%</td>
+                        <td>${Math.floor(pace)}:${String(Math.round((pace % 1) * 60)).padStart(2, '0')}</td>
+                        <td>${hours}:${String(mins).padStart(2, '0')}</td>
+                        <td style="color: ${margin > 0 ? '#22C55E' : '#EF4444'};">${margin > 0 ? '+' : ''}${margin}</td>
+                    </tr>
+                `;
+            }
+
+            document.getElementById('splitsTable').innerHTML = html;
+        }
+
+        function generateNutrition(hours) {
+            let html = '';
+            const interval = 0.75; // Cada 45 minutos
+
+            for (let h = 0.75; h <= hours; h += interval) {
+                const hour = Math.floor(h);
+                const min = Math.round((h % 1) * 60);
+                const geles = Math.ceil(h / 1.5);
+
+                html += `
+                    <tr>
+                        <td>${hour}:${String(min).padStart(2, '0')}</td>
+                        <td>${geles} gel</td>
+                        <td>500 mg Na</td>
+                        <td>500 ml</td>
+                    </tr>
+                `;
+            }
+
+            document.getElementById('nutritionTable').innerHTML = html;
+        }
+
+        function drawElevationChart() {
+            const ctx = document.getElementById('elevationChart').getContext('2d');
+            const distances = raceData.segments.map((s, i) => i).slice(0, 20);
+            const elevations = raceData.segments.map(s => s.elevation).slice(0, 20);
+
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: distances,
+                    datasets: [{
+                        label: 'Elevación (m)',
+                        data: elevations,
+                        borderColor: '#FF6600',
+                        backgroundColor: 'rgba(255, 102, 0, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 0,
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            ticks: { color: 'rgba(255, 255, 255, 0.7)' },
+                            grid: { color: 'rgba(255, 102, 0, 0.1)' }
+                        },
+                        x: {
+                            ticks: { color: 'rgba(255, 255, 255, 0.7)' },
+                            grid: { color: 'rgba(255, 102, 0, 0.1)' }
+                        }
+                    }
+                }
+            });
+        }
+
+        function downloadStrategy() {
+            alert('📥 Funcionalidad en desarrollo');
+        }
     </script>
 </body>
 </html>
