@@ -469,18 +469,180 @@
             }
         }
 
+        /* ========== MENÚ HAMBURGUESA MÓVIL ========== */
+        .hamburger {
+            display: none;
+            background: none;
+            border: none;
+            color: #FF6600;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .hamburger:hover {
+            color: #FF8800;
+        }
+
+        .mobile-menu {
+            display: none;
+            position: fixed;
+            top: 70px;
+            left: 0;
+            width: 100%;
+            background: rgba(10, 10, 16, 0.98);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 102, 0, 0.2);
+            z-index: 999;
+            animation: slideInDown 0.3s ease;
+        }
+
+        .mobile-menu.open {
+            display: block;
+        }
+
+        .mobile-menu nav {
+            display: flex;
+            flex-direction: column;
+            padding: 1rem 0;
+        }
+
+        .mobile-menu a {
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            font-weight: 600;
+            padding: 1rem 1.5rem;
+            transition: all 0.3s ease;
+            border-left: 3px solid transparent;
+        }
+
+        .mobile-menu a:hover {
+            color: #FF6600;
+            background: rgba(255, 102, 0, 0.05);
+            border-left-color: #FF6600;
+        }
+
+        .mobile-menu a.active {
+            color: #FF6600;
+            background: rgba(255, 102, 0, 0.05);
+            border-left-color: #FF6600;
+        }
+
         @media (max-width: 768px) {
             .cart-panel {
                 width: 100%;
             }
 
             .products-grid {
-                grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-                gap: 1.5rem;
+                grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+                gap: 1rem;
+                padding: 0 0.5rem;
             }
 
             .section-title {
-                font-size: 1.8rem;
+                font-size: 1.6rem;
+            }
+
+            .main-container {
+                padding: 2rem 1rem;
+            }
+
+            nav {
+                display: none !important;
+            }
+
+            .hamburger {
+                display: block;
+            }
+
+            .product-image-container {
+                height: 180px;
+            }
+
+            .search-input {
+                min-width: 150px;
+                flex: 1;
+            }
+
+            .filters-container {
+                gap: 0.75rem;
+            }
+
+            .product-info {
+                padding: 1rem;
+            }
+
+            .product-name {
+                font-size: 0.95rem;
+                -webkit-line-clamp: 2;
+            }
+
+            .product-price {
+                font-size: 1.4rem;
+            }
+
+            .notification {
+                top: 80px;
+                right: 10px;
+                left: 10px;
+                padding: 0.75rem 1rem;
+                font-size: 0.9rem;
+            }
+
+            .header {
+                position: fixed;
+                width: 100%;
+                top: 0;
+            }
+
+            .main-container {
+                margin-top: 70px;
+            }
+
+            #quienes-somos {
+                padding: 2rem 1rem !important;
+            }
+
+            .cart-panel {
+                width: 100% !important;
+                max-width: 100% !important;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .products-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 0.75rem;
+            }
+
+            .section-title {
+                font-size: 1.4rem;
+            }
+
+            .product-info {
+                padding: 0.75rem;
+            }
+
+            .product-name {
+                font-size: 0.9rem;
+                margin-bottom: 0.5rem;
+            }
+
+            .add-to-cart-btn {
+                padding: 0.7rem 0.5rem;
+                font-size: 0.85rem;
+            }
+
+            .search-input,
+            .category-select {
+                padding: 0.65rem 1rem;
+                font-size: 0.85rem;
+            }
+
+            .cart-button {
+                width: 40px;
+                height: 40px;
+                font-size: 1.2rem;
             }
         }
     </style>
@@ -488,14 +650,14 @@
 <body>
     <!-- HEADER CON MENÚ -->
     <header class="header">
-        <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div class="max-w-7xl mx-auto px-4 md:px-6 py-4 flex items-center justify-between">
             <a href="/" style="text-decoration: none;">
                 <div class="logo">
                     <span class="logo-we">WE</span><span class="logo-your">YOUR</span><span class="logo-feed">FEED</span>
                 </div>
             </a>
 
-            <!-- MENÚ DE NAVEGACIÓN -->
+            <!-- MENÚ DE NAVEGACIÓN (Desktop) -->
             <nav style="display: flex; gap: 2rem; align-items: center; flex: 1; justify-content: center;">
                 <a href="/" style="color: #FF6600; text-decoration: none; font-weight: 600; transition: all 0.3s ease;" onmouseover="this.style.color='#FFFFFF'" onmouseout="this.style.color='#FF6600'">🏠 Inicio</a>
                 <a href="#productos" style="color: rgba(255,255,255,0.7); text-decoration: none; font-weight: 600; transition: all 0.3s ease;" onmouseover="this.style.color='#FF6600'" onmouseout="this.style.color='rgba(255,255,255,0.7)'">📦 Productos</a>
@@ -503,10 +665,24 @@
                 <a href="#quienes-somos" style="color: rgba(255,255,255,0.7); text-decoration: none; font-weight: 600; transition: all 0.3s ease;" onmouseover="this.style.color='#FF6600'" onmouseout="this.style.color='rgba(255,255,255,0.7)'">👥 Quiénes Somos</a>
             </nav>
 
-            <button onclick="toggleCart()" class="cart-button">
-                <span>🛒</span>
-                <span id="cartCount" class="cart-badge">0</span>
-            </button>
+            <!-- BOTONES DERECHOS -->
+            <div style="display: flex; gap: 1rem; align-items: center;">
+                <button onclick="toggleCart()" class="cart-button">
+                    <span>🛒</span>
+                    <span id="cartCount" class="cart-badge">0</span>
+                </button>
+                <button onclick="toggleMobileMenu()" class="hamburger">☰</button>
+            </div>
+        </div>
+
+        <!-- MENÚ MÓVIL -->
+        <div id="mobileMenu" class="mobile-menu">
+            <nav>
+                <a href="/" onclick="closeMobileMenu()">🏠 Inicio</a>
+                <a href="#productos" onclick="closeMobileMenu()">📦 Productos</a>
+                <a href="/calculadora.html" onclick="closeMobileMenu()">🧮 Calculadora</a>
+                <a href="#quienes-somos" onclick="closeMobileMenu()">👥 Quiénes Somos</a>
+            </nav>
         </div>
     </header>
 
@@ -626,6 +802,26 @@
         let categories = [];
         let lastRequestTime = 0;
         const REQUEST_THROTTLE_MS = 500;
+
+        // Funciones del menú móvil
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobileMenu');
+            menu.classList.toggle('open');
+        }
+
+        function closeMobileMenu() {
+            const menu = document.getElementById('mobileMenu');
+            menu.classList.remove('open');
+        }
+
+        // Cerrar menú al hacer click fuera
+        document.addEventListener('click', (e) => {
+            const menu = document.getElementById('mobileMenu');
+            const hamburger = document.querySelector('.hamburger');
+            if (menu && !menu.contains(e.target) && !hamburger.contains(e.target)) {
+                menu.classList.remove('open');
+            }
+        });
 
         async function initializeFirebase() {
             try {
