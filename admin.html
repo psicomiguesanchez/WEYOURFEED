@@ -294,11 +294,20 @@
 
         async function loadProducts() {
             const snap = await db.collection('productos').get();
+            const categoriesSnap = await db.collection('categorias').get();
+
+            // Crear mapa de categorías (ID -> nombre)
+            const categoriesMap = {};
+            categoriesSnap.docs.forEach(doc => {
+                categoriesMap[doc.id] = doc.data().nombre;
+            });
+
             let html = '';
             snap.docs.forEach(d => {
                 const data = d.data();
+                const categoryName = categoriesMap[data.categoriaId] || data.categoriaId || 'Sin categoría';
                 const img = data.imagenBase64 ? `<img src="${data.imagenBase64}" style="width:50px; height:50px; border-radius:8px; object-fit:contain; background:#000;">` : '<div style="width:50px; height:50px; background:#333; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:0.8rem;">Sin img</div>';
-                html += `<tr><td style="display:flex; align-items:center; gap:0.75rem;">${img}<span>${data.nombre}</span></td><td>${data.categoriaId || 'N/A'}</td><td>$${(data.precio || 0).toLocaleString('es-ES')}</td><td><button class="btn" style="padding: 0.5rem 1rem; font-size: 0.9rem;" onclick="openEditModal('${d.id}')"">Editar</button></td></tr>`;
+                html += `<tr><td style="display:flex; align-items:center; gap:0.75rem;">${img}<span>${data.nombre}</span></td><td>${categoryName}</td><td>$${(data.precio || 0).toLocaleString('es-ES')}</td><td><button class="btn" style="padding: 0.5rem 1rem; font-size: 0.9rem;" onclick="openEditModal('${d.id}')"">Editar</button></td></tr>`;
             });
             document.getElementById('productsTable').innerHTML = html || '<tr><td colspan="4" style="text-align: center;">Sin productos</td></tr>';
         }
