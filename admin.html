@@ -205,10 +205,21 @@
             const config = await response.json();
             if (firebase.apps.length === 0) firebase.initializeApp(config);
             db = firebase.firestore();
-            loadDashboard();
-            loadProducts();
-            loadOrders();
-            loadClients();
+
+            // Verificar autenticación
+            firebase.auth().onAuthStateChanged(user => {
+                if (user) {
+                    console.log('✅ Autenticado:', user.email, 'UID:', user.uid);
+                    loadDashboard();
+                    loadProducts();
+                    loadOrders();
+                    loadClients();
+                } else {
+                    console.log('❌ No autenticado');
+                    alert('⚠️ No estás autenticado. Redirigiendo a login...');
+                    window.location.href = '/';
+                }
+            });
         }
 
         function showPage(event, page) {
