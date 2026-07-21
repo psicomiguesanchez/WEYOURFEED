@@ -57,6 +57,7 @@
             <ul class="sidebar-menu">
                 <li><div class="sidebar-link active" onclick="showPage(event, 'dashboard')">📊 Dashboard</div></li>
                 <li><div class="sidebar-link" onclick="showPage(event, 'products')">📦 Productos</div></li>
+                <li><div class="sidebar-link" onclick="showPage(event, 'categories')">🏷️ Categorías</div></li>
                 <li><div class="sidebar-link" onclick="showPage(event, 'orders')">🛒 Órdenes</div></li>
                 <li><div class="sidebar-link" onclick="showPage(event, 'clients')">👥 Clientes</div></li>
                 <li><div class="sidebar-link" onclick="showPage(event, 'config')">⚙️ Configuración</div></li>
@@ -85,6 +86,20 @@
                         <table>
                             <thead><tr><th>Referencia</th><th>Cliente</th><th>Monto</th><th>Estado</th><th>Fecha</th></tr></thead>
                             <tbody id="recentOrdersTable"><tr><td colspan="5" style="text-align: center; color: rgba(255,255,255,0.5);">Cargando...</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CATEGORÍAS -->
+            <div id="categories" class="page-content">
+                <div class="card">
+                    <h3 style="color: #FF6600; margin-bottom: 1.5rem; font-size: 1.2rem;">🏷️ Categorías</h3>
+                    <button class="btn" onclick="openNewCategoryModal()" style="margin-bottom: 1.5rem;">+ Nueva Categoría</button>
+                    <div style="overflow-x: auto;">
+                        <table>
+                            <thead><tr><th>Nombre</th><th>Productos</th><th>Acciones</th></tr></thead>
+                            <tbody id="categoriesTable"><tr><td colspan="3" style="text-align: center; color: rgba(255,255,255,0.5);">Cargando...</td></tr></tbody>
                         </table>
                     </div>
                 </div>
@@ -154,6 +169,24 @@
         </main>
     </div>
 
+    <!-- MODAL EDITAR CATEGORÍA -->
+    <div id="categoryModal" class="modal">
+        <div class="modal-content">
+            <h2>🏷️ Editar Categoría</h2>
+            <div class="form-group">
+                <label>Nombre</label>
+                <input type="text" id="categoryName" placeholder="Nombre de la categoría">
+            </div>
+            <div class="form-group">
+                <label>Productos en esta categoría: <span id="productCount" style="color: #FF6600; font-weight: 700;">0</span></label>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn btn-secondary" onclick="closeCategoryModal()">Cancelar</button>
+                <button class="btn" onclick="saveCategoryName()">💾 Guardar Nombre</button>
+            </div>
+        </div>
+    </div>
+
     <!-- MODAL EDITAR PRODUCTO -->
     <div id="editModal" class="modal">
         <div class="modal-content">
@@ -200,6 +233,7 @@
     <script>
         let db;
         let currentEditingProductId = null;
+        let currentEditingCategoryId = null;
 
         async function initFirebase() {
             const response = await fetch('/api/firebase-config');
@@ -228,8 +262,18 @@
             document.getElementById(page).classList.add('active');
             document.querySelectorAll('.sidebar-link').forEach(e => e.classList.remove('active'));
             event.target.classList.add('active');
-            const titles = { dashboard: '📊 Dashboard', products: '📦 Productos', orders: '🛒 Órdenes', clients: '👥 Clientes', config: '⚙️ Configuración', audit: '📋 Auditoría' };
+            const titles = {
+                dashboard: '📊 Dashboard',
+                products: '📦 Productos',
+                categories: '🏷️ Categorías',
+                orders: '🛒 Órdenes',
+                clients: '👥 Clientes',
+                config: '⚙️ Configuración',
+                audit: '📋 Auditoría'
+            };
             document.getElementById('pageTitle').textContent = titles[page];
+
+            if (page === 'categories') loadCategories();
         }
 
         async function loadDashboard() {
@@ -396,6 +440,95 @@
 
         function logout() {
             if (confirm('¿Cerrar sesión?')) window.location.href = '/';
+        }
+
+        // ===== FUNCIONES DE CATEGORÍAS =====
+        async function loadCategories() {
+            try {
+                const catSnap = await db.collection('categorias').get();
+                const prodSnap = await db.collection('productos').get();
+
+                // Contar productos por categoría
+                const prodCount = {};
+                prodSnap.docs.forEach(d => {
+                    const catId = d.data().categoriaId;
+                    prodCount[catId] = (prodCount[catId] || 0) + 1;
+                });
+
+                let html = '';
+                catSnap.docs.forEach(d => {
+                    const count = prodCount[d.id] || 0;
+                    html += `<tr>
+                        <td>${d.data().nombre}</td>
+                        <td>${count}</td>
+                        <td>
+                            <button class="btn" style="padding: 0.5rem 1rem; font-size: 0.9rem; margin-right: 0.5rem;" onclick="openEditCategoryModal('${d.id}', '${d.data().nombre}', ${count})">✏️ Editar</button>
+                            <button class="btn" style="padding: 0.5rem 1rem; font-size: 0.9rem; background: rgba(239,68,68,0.2); color: #FCA5A5;" onclick="deleteCategory('${d.id}')">🗑️ Eliminar</button>
+                        </td>
+                    </tr>`;
+                });
+
+                document.getElementById('categoriesTable').innerHTML = html || '<tr><td colspan="3" style="text-align: center;">Sin categorías</td></tr>';
+            } catch (err) {
+                console.error('Error cargando categorías:', err);
+            }
+        }
+
+        function openEditCategoryModal(catId, nombre, count) {
+            currentEditingCategoryId = catId;
+            document.getElementById('categoryName').value = nombre;
+            document.getElementById('productCount').textContent = count;
+            document.getElementById('categoryModal').classList.add('active');
+        }
+
+        function openNewCategoryModal() {
+            currentEditingCategoryId = null;
+            document.getElementById('categoryName').value = '';
+            document.getElementById('productCount').textContent = '0';
+            document.getElementById('categoryModal').classList.add('active');
+        }
+
+        function closeCategoryModal() {
+            document.getElementById('categoryModal').classList.remove('active');
+            currentEditingCategoryId = null;
+        }
+
+        async function saveCategoryName() {
+            const nombre = document.getElementById('categoryName').value;
+
+            if (!nombre) {
+                alert('El nombre de la categoría es requerido');
+                return;
+            }
+
+            try {
+                if (currentEditingCategoryId) {
+                    // Actualizar categoría existente
+                    await db.collection('categorias').doc(currentEditingCategoryId).update({ nombre });
+                    alert('✅ Categoría actualizada (sin alterar productos)');
+                } else {
+                    // Crear nueva categoría
+                    await db.collection('categorias').add({ nombre });
+                    alert('✅ Categoría creada');
+                }
+
+                closeCategoryModal();
+                loadCategories();
+            } catch (err) {
+                alert('❌ Error: ' + err.message);
+            }
+        }
+
+        async function deleteCategory(catId) {
+            if (!confirm('⚠️ ¿Eliminar esta categoría? Los productos no se eliminarán.')) return;
+
+            try {
+                await db.collection('categorias').doc(catId).delete();
+                alert('✅ Categoría eliminada');
+                loadCategories();
+            } catch (err) {
+                alert('❌ Error: ' + err.message);
+            }
         }
 
         initFirebase();
