@@ -159,11 +159,27 @@
             </div>
             <div class="form-group">
                 <label>Categoría</label>
-                <input type="text" id="editCategoria" placeholder="Categoría">
+                <div style="display: flex; gap: 0.5rem;">
+                    <select id="editCategoria" style="flex: 1; padding: 0.75rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,102,0,0.2); border-radius: 8px; color: #FFF; cursor: pointer;">
+                        <option value="">Seleccionar categoría...</option>
+                    </select>
+                    <button class="btn" style="padding: 0.75rem 1rem; font-size: 0.9rem;" onclick="showNewCategoryInput()">+ Nueva</button>
+                </div>
+                <input type="text" id="newCategoryInput" placeholder="Nueva categoría" style="display: none; margin-top: 0.5rem; padding: 0.75rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,102,0,0.2); border-radius: 8px; color: #FFF; width: 100%;">
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label>Costo ($)</label>
+                    <input type="number" id="editCosto" placeholder="Costo" min="0" oninput="calcularGanancia()">
+                </div>
+                <div class="form-group">
+                    <label>PVP ($)</label>
+                    <input type="number" id="editPrecio" placeholder="Precio venta" min="0" oninput="calcularGanancia()">
+                </div>
             </div>
             <div class="form-group">
-                <label>Precio (PVP)</label>
-                <input type="number" id="editPrecio" placeholder="Precio" min="0">
+                <label>Ganancia ($)</label>
+                <input type="number" id="editGanancia" placeholder="Ganancia" disabled style="background: rgba(255,102,0,0.1); cursor: not-allowed;">
             </div>
             <div class="form-group">
                 <label>Descripción</label>
@@ -227,12 +243,49 @@
             document.getElementById('productsTable').innerHTML = html || '<tr><td colspan="4" style="text-align: center;">Sin productos</td></tr>';
         }
 
-        function openEditModal(productId, nombre, categoria, precio, descripcion) {
+        async function loadCategories() {
+            try {
+                const snap = await db.collection('categorias').get();
+                const select = document.getElementById('editCategoria');
+                select.innerHTML = '<option value="">Seleccionar categoría...</option>';
+                snap.docs.forEach(d => {
+                    const opt = document.createElement('option');
+                    opt.value = d.id;
+                    opt.textContent = d.data().nombre;
+                    select.appendChild(opt);
+                });
+            } catch (err) {
+                console.log('Categorías no disponibles');
+            }
+        }
+
+        function showNewCategoryInput() {
+            const input = document.getElementById('newCategoryInput');
+            input.style.display = input.style.display === 'none' ? 'block' : 'none';
+            if (input.style.display === 'block') input.focus();
+        }
+
+        function calcularGanancia() {
+            const costo = parseInt(document.getElementById('editCosto').value) || 0;
+            const precio = parseInt(document.getElementById('editPrecio').value) || 0;
+            const ganancia = precio - costo;
+            document.getElementById('editGanancia').value = ganancia;
+        }
+
+        async function openEditModal(productId, nombre, categoria, precio, descripcion) {
             currentEditingProductId = productId;
+            await loadCategories();
+            const docSnap = await db.collection('productos').doc(productId).get();
+            const data = docSnap.data();
+
             document.getElementById('editNombre').value = nombre;
             document.getElementById('editCategoria').value = categoria;
             document.getElementById('editPrecio').value = precio;
+            document.getElementById('editCosto').value = data.costo || 0;
             document.getElementById('editDescripcion').value = descripcion;
+            document.getElementById('newCategoryInput').style.display = 'none';
+            document.getElementById('newCategoryInput').value = '';
+            calcularGanancia();
             document.getElementById('editModal').classList.add('active');
         }
 
@@ -244,18 +297,37 @@
         async function saveEditProduct() {
             if (!currentEditingProductId) return;
             const nombre = document.getElementById('editNombre').value;
-            const categoria = document.getElementById('editCategoria').value;
+            let categoria = document.getElementById('editCategoria').value;
+            const newCategory = document.getElementById('newCategoryInput').value;
+            const costo = parseInt(document.getElementById('editCosto').value) || 0;
             const precio = parseInt(document.getElementById('editPrecio').value) || 0;
+            const ganancia = precio - costo;
             const descripcion = document.getElementById('editDescripcion').value;
 
-            if (!nombre || !categoria) {
-                alert('Nombre y categoría son requeridos');
+            if (!nombre) {
+                alert('Nombre es requerido');
+                return;
+            }
+
+            // Si hay nueva categoría, crearla
+            if (newCategory) {
+                try {
+                    const catRef = await db.collection('categorias').add({ nombre: newCategory });
+                    categoria = catRef.id;
+                } catch (err) {
+                    alert('Error creando categoría: ' + err.message);
+                    return;
+                }
+            }
+
+            if (!categoria) {
+                alert('Selecciona o crea una categoría');
                 return;
             }
 
             try {
                 await db.collection('productos').doc(currentEditingProductId).update({
-                    nombre, categoriaId: categoria, precio, descripcion
+                    nombre, categoriaId: categoria, precio, costo, ganancia, descripcion
                 });
                 closeEditModal();
                 loadProducts();
