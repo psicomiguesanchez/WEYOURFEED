@@ -303,7 +303,7 @@
             document.getElementById('productsTable').innerHTML = html || '<tr><td colspan="4" style="text-align: center;">Sin productos</td></tr>';
         }
 
-        async function loadCategories() {
+        async function loadCategoriesIntoSelect() {
             try {
                 const snap = await db.collection('categorias').get();
                 const select = document.getElementById('editCategoria');
@@ -311,11 +311,11 @@
                 snap.docs.forEach(d => {
                     const opt = document.createElement('option');
                     opt.value = d.id;
-                    opt.textContent = d.data().nombre;
+                    opt.textContent = d.data().nombre || 'Sin nombre';
                     select.appendChild(opt);
                 });
             } catch (err) {
-                console.log('Categorías no disponibles');
+                console.error('Error cargando categorías:', err);
             }
         }
 
@@ -335,7 +335,7 @@
         async function openEditModal(productId) {
             try {
                 currentEditingProductId = productId;
-                await loadCategories();
+                await loadCategoriesIntoSelect();
                 const docSnap = await db.collection('productos').doc(productId).get();
                 const data = docSnap.data();
 
