@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STRATEGY - IA Nutricional Deportiva</title>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;700&family=Inter:wght@400;500;600;700&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: linear-gradient(135deg, #0A0A0A 0%, #1a1a2e 100%);
+            min-height: 100vh;
+            font-family: 'Inter', sans-serif;
+            color: #FFF;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .logo-strategy {
+            font-family: 'Oswald', sans-serif;
+            font-size: 3rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #FF6600 0%, #FF8800 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+        }
+
+        .tagline {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 0.95rem;
+        }
+
+        .layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        .card {
+            background: rgba(20, 20, 32, 0.6);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 102, 0, 0.2);
+            border-radius: 16px;
+            padding: 2rem;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: rgba(255, 102, 0, 0.4);
+        }
+
+        .card h2 {
+            color: #FF6600;
+            font-size: 1.3rem;
+            margin-bottom: 1.5rem;
+            font-family: 'Oswald', sans-serif;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            color: #FF6600;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 0.75rem;
+            background: rgba(30, 30, 45, 0.8);
+            border: 1.5px solid rgba(255, 102, 0, 0.2);
+            border-radius: 12px;
+            color: #FFF;
+            font-family: inherit;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #FF6600;
+            background: rgba(30, 30, 45, 0.95);
+            box-shadow: 0 0 20px rgba(255, 102, 0, 0.2);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 1rem;
+            background: linear-gradient(135deg, #FF6600 0%, #FF8800 100%);
+            border: none;
+            border-radius: 12px;
+            color: #000;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 1rem;
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(255, 102, 0, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Chat IA */
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 600px;
+        }
+
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 1rem;
+            padding: 1rem;
+            background: rgba(10, 10, 16, 0.4);
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .message {
+            padding: 1rem;
+            border-radius: 12px;
+            animation: slideInUp 0.3s ease;
+        }
+
+        .message.user {
+            background: rgba(255, 102, 0, 0.15);
+            border-left: 4px solid #FF6600;
+            align-self: flex-end;
+            max-width: 85%;
+        }
+
+        .message.ai {
+            background: rgba(34, 197, 94, 0.15);
+            border-left: 4px solid #22C55E;
+            align-self: flex-start;
+            max-width: 85%;
+        }
+
+        .message.ai strong {
+            color: #22C55E;
+        }
+
+        .message.system {
+            background: rgba(59, 130, 246, 0.1);
+            border-left: 4px solid #3B82F6;
+            align-self: center;
+            max-width: 90%;
+            text-align: center;
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        @keyframes slideInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .input-group {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .input-group input {
+            flex: 1;
+            margin-bottom: 0;
+        }
+
+        .input-group button {
+            flex: 0 0 100px;
+            padding: 0.75rem;
+        }
+
+        /* Resultados */
+        .results {
+            display: none;
+        }
+
+        .results.active {
+            display: block;
+            animation: fadeIn 0.6s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .metric {
+            background: rgba(255, 102, 0, 0.08);
+            padding: 1rem;
+            border-radius: 12px;
+            border-left: 4px solid #FF6600;
+            margin-bottom: 1rem;
+        }
+
+        .metric-label {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.9rem;
+        }
+
+        .metric-value {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: #FF6600;
+            margin-top: 0.5rem;
+        }
+
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .product-card {
+            background: rgba(255, 102, 0, 0.08);
+            border: 1px solid rgba(255, 102, 0, 0.2);
+            border-radius: 12px;
+            padding: 1rem;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .product-card:hover {
+            border-color: #FF6600;
+            background: rgba(255, 102, 0, 0.15);
+        }
+
+        .product-name {
+            color: #FF6600;
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .product-price {
+            color: #FFF;
+            font-weight: 700;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 102, 0, 0.15);
+            border-top-color: #FF6600;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            .layout {
+                grid-template-columns: 1fr;
+            }
+
+            .chat-container {
+                height: 400px;
+            }
+
+            .logo-strategy {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo-strategy">⚡ STRATEGY</div>
+            <p class="tagline">IA Nutricional Deportiva</p>
+            <p class="subtitle">Asesamiento inteligente personalizado para tu rendimiento</p>
+        </div>
+
+        <div class="layout">
+            <!-- PANEL DE DATOS -->
+            <div class="card">
+                <h2>📊 Tu Evento</h2>
+
+                <div class="form-group">
+                    <label>Selecciona carrera de Colombia:</label>
+                    <select id="raceSelect" onchange="loadRaceData(this.value)">
+                        <option value="">-- Elegir carrera --</option>
+                        <option value="mmb-21k">Media Maratón Bogotá 21K</option>
+                        <option value="maraton-cali">Maratón Cali</option>
+                        <option value="trail-manizales">Trail Manizales 30K</option>
+                        <option value="vuelta-colombia">Vuelta Colombia (etapa)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>O ingresa distancia (km):</label>
+                    <input type="number" id="distance" placeholder="42" min="1" step="0.1">
+                </div>
+
+                <div class="form-group">
+                    <label>Tiempo objetivo (hh:mm:ss):</label>
+                    <input type="text" id="time" placeholder="02:45:30">
+                </div>
+
+                <div class="form-group">
+                    <label>Tu peso (kg):</label>
+                    <input type="number" id="weight" placeholder="70" min="30" step="0.1">
+                </div>
+
+                <div class="form-group">
+                    <label>Tu edad:</label>
+                    <input type="number" id="age" placeholder="35" min="18" max="100">
+                </div>
+
+                <div class="form-group">
+                    <label>Temperatura esperada (°C):</label>
+                    <input type="number" id="temperature" placeholder="20" min="0" max="50">
+                </div>
+
+                <div class="form-group">
+                    <label>Contexto adicional:</label>
+                    <textarea id="context" placeholder="Ej: Primera maratón, nivel avanzado, tolerancia digestiva baja..." style="resize: vertical; min-height: 100px;"></textarea>
+                </div>
+
+                <button class="btn" onclick="analyzeWithAI()">🤖 Analizar con IA</button>
+            </div>
+
+            <!-- PANEL DE IA -->
+            <div class="card">
+                <h2>💬 Asesor IA</h2>
+
+                <div class="chat-container">
+                    <div class="messages" id="chatMessages">
+                        <div class="message system">Iniciando sesión de análisis nutricional...</div>
+                    </div>
+
+                    <div class="input-group">
+                        <input type="text" id="userQuestion" placeholder="Haz preguntas sobre nutrición..." onkeypress="if(event.key==='Enter') askAI()">
+                        <button class="btn" onclick="askAI()" style="margin-bottom: 0;">Enviar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RESULTADOS -->
+        <div id="results" class="results">
+            <div class="card">
+                <h2>📈 Plan Nutricional Personalizado</h2>
+
+                <div class="metric">
+                    <div class="metric-label">Carbohidratos Totales</div>
+                    <div class="metric-value" id="carbsTotal">-</div>
+                </div>
+
+                <div class="metric">
+                    <div class="metric-label">Electrolitos por hora</div>
+                    <div class="metric-value" id="sodiumPerHour">-</div>
+                </div>
+
+                <div class="metric">
+                    <div class="metric-label">Hidratación por hora</div>
+                    <div class="metric-value" id="hydrationPerHour">-</div>
+                </div>
+
+                <div style="margin-top: 2rem;">
+                    <h3 style="color: #FF6600; margin-bottom: 1rem;">🛒 Productos Recomendados</h3>
+                    <div class="products-grid" id="productsGrid">
+                        <p style="grid-column: 1/-1; text-align: center; color: rgba(255,255,255,0.5);">Cargando productos...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script>
+        let db;
+        const colombiaRaces = {
+            'mmb-21k': { distance: 21.1, elevation: 150, name: 'Media Maratón Bogotá' },
+            'maraton-cali': { distance: 42.2, elevation: 120, name: 'Maratón Cali' },
+            'trail-manizales': { distance: 30, elevation: 800, name: 'Trail Manizales' },
+            'vuelta-colombia': { distance: 180, elevation: 3000, name: 'Vuelta Colombia (9 etapas)' }
+        };
+
+        // Inicializar Firebase
+        async function initFirebase() {
+            try {
+                const response = await fetch('/api/firebase-config');
+                const config = await response.json();
+                if (firebase.apps.length === 0) firebase.initializeApp(config);
+                db = firebase.firestore();
+                console.log('✅ Firebase initialized');
+            } catch (error) {
+                console.error('Firebase error:', error);
+            }
+        }
+        initFirebase();
+
+        function loadRaceData(raceId) {
+            if (!raceId) return;
+            const race = colombiaRaces[raceId];
+            if (race) {
+                document.getElementById('distance').value = race.distance;
+            }
+        }
+
+        async function analyzeWithAI() {
+            const distance = parseFloat(document.getElementById('distance').value) || 0;
+            const time = document.getElementById('time').value || '0:0:0';
+            const weight = parseFloat(document.getElementById('weight').value) || 70;
+            const age = parseInt(document.getElementById('age').value) || 35;
+            const temperature = parseInt(document.getElementById('temperature').value) || 20;
+            const context = document.getElementById('context').value;
+
+            if (!distance || !time) {
+                alert('Por favor ingresa distancia y tiempo');
+                return;
+            }
+
+            // Parsear tiempo
+            const [h, m, s] = time.split(':').map(Number);
+            const totalMinutes = (h || 0) * 60 + (m || 0) + (s || 0) / 60;
+            const totalHours = totalMinutes / 60;
+
+            // Cálculos nutricionales
+            const carbsPerKm = 1.0;
+            const totalCarbs = distance * carbsPerKm;
+            const tempAdjustment = temperature > 25 ? 1.2 : (temperature < 10 ? 0.8 : 1.0);
+            const carbsPerHour = (totalCarbs / totalHours) * tempAdjustment;
+            const sodiumPerHour = weight * 5;
+            let hydrationPerHour = 500;
+            if (temperature > 25) hydrationPerHour = 750;
+            if (temperature > 30) hydrationPerHour = 1000;
+
+            // Mostrar resultados
+            document.getElementById('carbsTotal').textContent = `${totalCarbs.toFixed(0)}g`;
+            document.getElementById('sodiumPerHour').textContent = `${sodiumPerHour.toFixed(0)}mg`;
+            document.getElementById('hydrationPerHour').textContent = `${hydrationPerHour}ml`;
+
+            // Cargar productos
+            await loadRecommendedProducts();
+
+            // Mostrar panel de resultados
+            document.getElementById('results').classList.add('active');
+
+            // Enviar a IA
+            const aiPrompt = `Eres un experto en nutrición deportiva. Analiza este evento:
+- Distancia: ${distance}km
+- Tiempo objetivo: ${h}h ${m}m
+- Atleta: ${weight}kg, ${age} años
+- Temperatura: ${temperature}°C
+- Contexto: ${context || 'Ninguno especificado'}
+
+Proporciona:
+1. Recomendación de carbohidratos (${totalCarbs.toFixed(0)}g total, ${carbsPerHour.toFixed(0)}g/hora)
+2. Estrategia de hidratación (${hydrationPerHour}ml/hora)
+3. Plan de toma de productos
+4. Consejos para el día anterior
+5. Precauciones importantes
+
+Sé específico y práctico.`;
+
+            addMessage(aiPrompt, 'user');
+            await getAIResponse(aiPrompt);
+        }
+
+        async function loadRecommendedProducts() {
+            try {
+                if (!db) return;
+                const snap = await db.collection('productos').get();
+                const products = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })).slice(0, 6);
+
+                let html = '';
+                products.forEach(p => {
+                    html += `
+                        <div class="product-card">
+                            <div class="product-name">${p.nombre}</div>
+                            <div style="font-size: 0.85rem; color: rgba(255,255,255,0.6); margin-bottom: 0.5rem;">${p.categoriaId}</div>
+                            <div class="product-price">$${(p.precio || 0).toLocaleString('es-ES')}</div>
+                        </div>
+                    `;
+                });
+                document.getElementById('productsGrid').innerHTML = html;
+            } catch (error) {
+                console.error('Error loading products:', error);
+            }
+        }
+
+        function addMessage(text, sender) {
+            const messages = document.getElementById('chatMessages');
+            const div = document.createElement('div');
+            div.className = `message ${sender}`;
+            div.textContent = text;
+            messages.appendChild(div);
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        async function getAIResponse(question) {
+            try {
+                // Remover mensaje de "Analizando"
+                const lastMessage = document.querySelector('.message.system:last-of-type');
+                if (lastMessage) lastMessage.remove();
+
+                // Respuestas inteligentes pre-configuradas basadas en nutrición deportiva
+                const responses = {
+                    'carb': '📊 **Carbohidratos para tu evento:**\n\nRecomendación: 1-1.2g por km\n• Consumir cada 30-45 minutos\n• Alternancia: gel + bebida deportiva\n• Probado previamente en entrenamientos\n\n✅ Productos recomendados:\n- Geles de 30-40g de carbos\n- Bebidas deportivas 6-8% carbos\n- Plátanos (si toleras sólido)',
+                    'hidrat': '💧 **Estrategia de Hidratación:**\n\nBase: 400-500ml/hora\n• En calor (>25°C): +250ml/hora\n• En frío (<10°C): -100ml/hora\n• Beber pequeños sorbos cada 15min\n\n⚠️ Evitar:\n- Beber más de 1L/hora\n- Bebidas nuevas el día de carrera\n- Esperar a tener sed',
+                    'electro': '⚡ **Electrolitos (Sodio):**\n\nRecomendación: 500-1000mg/hora\n• Crítico en eventos >2 horas\n• Previene hiponatremia\n• Aumenta absorción de agua\n\n✅ Fuentes:\n- Bebidas deportivas\n- Geles salados\n- Cápsulas de sodio',
+                    'product': '🛒 **Sobre productos WEYOURFEED:**\n\nNuestro catálogo incluye:\n✅ Geles de carbohidratos\n✅ Bebidas deportivas\n✅ Electrolitos\n✅ Recuperación post-evento\n\nTodos probados por atletas. Consulta el catálogo en la sección "Productos"',
+                    'primer': '🥇 **Si es tu primera vez:**\n\n1. **Entrena con los productos** que usarás en carrera\n2. **No pruebes nada nuevo** el día del evento\n3. **Empieza con menos** de lo que crees necesitar\n4. **Ajusta según tu tolerancia**\n\n⚠️ Cada atleta es diferente. Lo que funciona para otros puede no funcionar para ti.',
+                    'recuper': '🔄 **Recuperación Post-Evento:**\n\nPrimeros 30 min:\n• 1.2g carbos + 0.3g proteína por kg de peso\n• Rehidratar (150% de líquido perdido)\n• Electrolitos\n\nPróximas 24h:\n• Comidas normales\n• Descanso\n• Estiramientos suave'
+                };
+
+                // Buscar palabra clave en la pregunta
+                const lowerQuestion = question.toLowerCase();
+                let response = '🤖 **STRATEGY** - Asesor de Nutrición Deportiva\n\n';
+
+                if (lowerQuestion.includes('carb') || lowerQuestion.includes('gel') || lowerQuestion.includes('energía')) {
+                    response += responses.carb;
+                } else if (lowerQuestion.includes('agua') || lowerQuestion.includes('hidrat') || lowerQuestion.includes('beber')) {
+                    response += responses.hidrat;
+                } else if (lowerQuestion.includes('electro') || lowerQuestion.includes('sodio') || lowerQuestion.includes('sal')) {
+                    response += responses.electro;
+                } else if (lowerQuestion.includes('product') || lowerQuestion.includes('weyour') || lowerQuestion.includes('qué comprar')) {
+                    response += responses.product;
+                } else if (lowerQuestion.includes('primer') || lowerQuestion.includes('primeriza') || lowerQuestion.includes('novata')) {
+                    response += responses.primer;
+                } else if (lowerQuestion.includes('después') || lowerQuestion.includes('post') || lowerQuestion.includes('recuper')) {
+                    response += responses.recuper;
+                } else {
+                    response += '✅ **STRATEGY está en línea**\n\nSoy especialista en nutrición deportiva. Pregúntame sobre:\n• Carbohidratos\n• Hidratación\n• Electrolitos\n• Productos\n• Recuperación\n• Estrategias por deporte\n\n¿En qué puedo ayudarte?';
+                }
+
+                addMessage(response, 'ai');
+            } catch (error) {
+                console.error('Error:', error);
+                addMessage('⚠️ Error procesando consulta. Intenta nuevamente.', 'system');
+            }
+        }
+
+        async function askAI() {
+            const question = document.getElementById('userQuestion').value;
+            if (!question) return;
+
+            addMessage(question, 'user');
+            document.getElementById('userQuestion').value = '';
+            await getAIResponse(question);
+        }
+    </script>
+</body>
+</html>
