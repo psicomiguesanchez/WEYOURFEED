@@ -469,7 +469,7 @@
             }
         }
 
-        /* ========== MENÚ HAMBURGUESA MÓVIL ========== */
+        /* ========== MENÚ HAMBURGUESA MÓVIL - MODAL CENTRAL ========== */
         .hamburger {
             display: none !important;
             background: none;
@@ -489,51 +489,133 @@
             background: rgba(255, 102, 0, 0.1);
         }
 
-        .mobile-menu {
-            display: none !important;
+        /* Overlay de fondo */
+        .mobile-menu-overlay {
+            display: none;
             position: fixed;
-            top: 70px;
+            top: 0;
             left: 0;
             width: 100%;
-            max-height: calc(100vh - 70px);
-            background: rgba(10, 10, 16, 0.98);
-            backdrop-filter: blur(20px);
-            border-bottom: 1px solid rgba(255, 102, 0, 0.2);
-            z-index: 999;
-            overflow-y: auto;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px);
+            z-index: 998;
+            animation: fadeIn 0.3s ease;
         }
 
-        .mobile-menu.open {
-            display: block !important;
-            animation: slideInDown 0.3s ease;
-        }
-
-        .mobile-menu nav {
-            display: flex;
-            flex-direction: column;
-            padding: 1rem 0;
-        }
-
-        .mobile-menu a {
-            color: rgba(255, 255, 255, 0.7);
-            text-decoration: none;
-            font-weight: 600;
-            padding: 1rem 1.5rem;
-            transition: all 0.3s ease;
-            border-left: 3px solid transparent;
+        .mobile-menu-overlay.open {
             display: block;
         }
 
-        .mobile-menu a:hover {
-            color: #FF6600;
-            background: rgba(255, 102, 0, 0.05);
-            border-left-color: #FF6600;
+        /* Modal del menú */
+        .mobile-menu {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 85%;
+            max-width: 400px;
+            max-height: 70vh;
+            background: rgba(20, 20, 32, 0.95);
+            backdrop-filter: blur(20px);
+            border: 2px solid rgba(255, 102, 0, 0.3);
+            border-radius: 24px;
+            z-index: 999;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            animation: scaleIn 0.4s cubic-bezier(0.23, 1, 0.320, 1);
         }
 
-        .mobile-menu a.active {
+        @keyframes scaleIn {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1);
+            }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .mobile-menu.open {
+            display: block;
+        }
+
+        /* Header del modal */
+        .mobile-menu-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid rgba(255, 102, 0, 0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .mobile-menu-header h2 {
             color: #FF6600;
-            background: rgba(255, 102, 0, 0.05);
+            font-size: 1.3rem;
+            font-weight: 700;
+            font-family: 'Oswald', sans-serif;
+        }
+
+        .mobile-menu-close {
+            background: none;
+            border: none;
+            color: #FF6600;
+            font-size: 1.8rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            padding: 0.5rem;
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+        }
+
+        .mobile-menu-close:hover {
+            color: #FF8800;
+            background: rgba(255, 102, 0, 0.1);
+        }
+
+        /* Contenido del menú */
+        .mobile-menu-content {
+            padding: 1rem 0;
+        }
+
+        .mobile-menu-content a {
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1.05rem;
+            padding: 1.25rem 1.5rem;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            border-left: 4px solid transparent;
+            border-bottom: 1px solid rgba(255, 102, 0, 0.08);
+        }
+
+        .mobile-menu-content a:last-child {
+            border-bottom: none;
+        }
+
+        .mobile-menu-content a:hover {
+            color: #FF6600;
+            background: rgba(255, 102, 0, 0.08);
             border-left-color: #FF6600;
+            padding-left: 2rem;
+        }
+
+        .mobile-menu-content a span {
+            font-size: 1.3rem;
         }
 
         @media (max-width: 768px) {
@@ -691,16 +773,35 @@
             </div>
         </div>
 
-        <!-- MENÚ MÓVIL -->
-        <div id="mobileMenu" class="mobile-menu">
-            <nav>
-                <a href="/" onclick="closeMobileMenu()">🏠 Inicio</a>
-                <a href="#productos" onclick="closeMobileMenu()">📦 Productos</a>
-                <a href="/calculadora.html" onclick="closeMobileMenu()">🧮 Calculadora</a>
-                <a href="#quienes-somos" onclick="closeMobileMenu()">👥 Quiénes Somos</a>
-            </nav>
-        </div>
     </header>
+
+    <!-- MODAL DEL MENÚ MÓVIL -->
+    <div id="mobileMenuOverlay" class="mobile-menu-overlay" onclick="if(event.target.id==='mobileMenuOverlay') closeMobileMenu()"></div>
+
+    <div id="mobileMenu" class="mobile-menu">
+        <div class="mobile-menu-header">
+            <h2>📋 Menú</h2>
+            <button class="mobile-menu-close" onclick="closeMobileMenu()">✕</button>
+        </div>
+        <div class="mobile-menu-content">
+            <a href="/" onclick="closeMobileMenu()">
+                <span>🏠</span>
+                <div>Inicio</div>
+            </a>
+            <a href="#productos" onclick="closeMobileMenu()">
+                <span>📦</span>
+                <div>Productos</div>
+            </a>
+            <a href="/calculadora.html" onclick="closeMobileMenu()">
+                <span>🧮</span>
+                <div>Calculadora</div>
+            </a>
+            <a href="#quienes-somos" onclick="closeMobileMenu()">
+                <span>👥</span>
+                <div>Quiénes Somos</div>
+            </a>
+        </div>
+    </div>
 
     <!-- CONTENIDO PRINCIPAL -->
     <main class="main-container">
@@ -822,19 +923,30 @@
         // Funciones del menú móvil
         function toggleMobileMenu() {
             const menu = document.getElementById('mobileMenu');
-            if (menu) {
-                menu.classList.toggle('open');
-                console.log('Menu toggled:', menu.classList.contains('open'));
-            } else {
-                console.error('mobileMenu not found');
+            const overlay = document.getElementById('mobileMenuOverlay');
+
+            if (menu && overlay) {
+                const isOpen = menu.classList.contains('open');
+
+                if (!isOpen) {
+                    // Abrir menú
+                    menu.classList.add('open');
+                    overlay.classList.add('open');
+                    document.body.style.overflow = 'hidden'; // Prevenir scroll en el fondo
+                } else {
+                    // Cerrar menú
+                    closeMobileMenu();
+                }
             }
         }
 
         function closeMobileMenu() {
             const menu = document.getElementById('mobileMenu');
-            if (menu) {
-                menu.classList.remove('open');
-            }
+            const overlay = document.getElementById('mobileMenuOverlay');
+
+            if (menu) menu.classList.remove('open');
+            if (overlay) overlay.classList.remove('open');
+            document.body.style.overflow = 'auto'; // Restaurar scroll
         }
 
         // Inicializar event listeners cuando el DOM esté listo
@@ -845,25 +957,25 @@
         }
 
         function initMobileMenu() {
-            // Cerrar menú al hacer click fuera
-            document.addEventListener('click', (e) => {
-                const menu = document.getElementById('mobileMenu');
-                const hamburger = document.querySelector('.hamburger');
-                if (menu && hamburger && !menu.contains(e.target) && !hamburger.contains(e.target)) {
-                    menu.classList.remove('open');
-                }
-            });
+            const overlay = document.getElementById('mobileMenuOverlay');
 
-            // Cerrar menú al hacer scroll
-            window.addEventListener('scroll', () => {
-                const menu = document.getElementById('mobileMenu');
-                if (menu) {
-                    menu.classList.remove('open');
-                }
-            });
+            if (overlay) {
+                overlay.addEventListener('click', (e) => {
+                    if (e.target === overlay) {
+                        closeMobileMenu();
+                    }
+                });
+            }
 
-            console.log('Mobile menu initialized');
+            console.log('✅ Mobile menu initialized');
         }
+
+        // Cerrar menú al presionar tecla Escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeMobileMenu();
+            }
+        });
 
         async function initializeFirebase() {
             try {
