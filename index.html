@@ -471,34 +471,41 @@
 
         /* ========== MENÚ HAMBURGUESA MÓVIL ========== */
         .hamburger {
-            display: none;
+            display: none !important;
             background: none;
             border: none;
             color: #FF6600;
             font-size: 1.5rem;
             cursor: pointer;
             transition: all 0.3s ease;
+            padding: 0.5rem;
+            width: 44px;
+            height: 44px;
+            border-radius: 8px;
         }
 
         .hamburger:hover {
             color: #FF8800;
+            background: rgba(255, 102, 0, 0.1);
         }
 
         .mobile-menu {
-            display: none;
+            display: none !important;
             position: fixed;
             top: 70px;
             left: 0;
             width: 100%;
+            max-height: calc(100vh - 70px);
             background: rgba(10, 10, 16, 0.98);
             backdrop-filter: blur(20px);
             border-bottom: 1px solid rgba(255, 102, 0, 0.2);
             z-index: 999;
-            animation: slideInDown 0.3s ease;
+            overflow-y: auto;
         }
 
         .mobile-menu.open {
-            display: block;
+            display: block !important;
+            animation: slideInDown 0.3s ease;
         }
 
         .mobile-menu nav {
@@ -514,6 +521,7 @@
             padding: 1rem 1.5rem;
             transition: all 0.3s ease;
             border-left: 3px solid transparent;
+            display: block;
         }
 
         .mobile-menu a:hover {
@@ -552,7 +560,15 @@
             }
 
             .hamburger {
-                display: block;
+                display: block !important;
+            }
+
+            .mobile-menu {
+                display: none !important;
+            }
+
+            .mobile-menu.open {
+                display: block !important;
             }
 
             .product-image-container {
@@ -806,22 +822,48 @@
         // Funciones del menú móvil
         function toggleMobileMenu() {
             const menu = document.getElementById('mobileMenu');
-            menu.classList.toggle('open');
+            if (menu) {
+                menu.classList.toggle('open');
+                console.log('Menu toggled:', menu.classList.contains('open'));
+            } else {
+                console.error('mobileMenu not found');
+            }
         }
 
         function closeMobileMenu() {
             const menu = document.getElementById('mobileMenu');
-            menu.classList.remove('open');
-        }
-
-        // Cerrar menú al hacer click fuera
-        document.addEventListener('click', (e) => {
-            const menu = document.getElementById('mobileMenu');
-            const hamburger = document.querySelector('.hamburger');
-            if (menu && !menu.contains(e.target) && !hamburger.contains(e.target)) {
+            if (menu) {
                 menu.classList.remove('open');
             }
-        });
+        }
+
+        // Inicializar event listeners cuando el DOM esté listo
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initMobileMenu);
+        } else {
+            initMobileMenu();
+        }
+
+        function initMobileMenu() {
+            // Cerrar menú al hacer click fuera
+            document.addEventListener('click', (e) => {
+                const menu = document.getElementById('mobileMenu');
+                const hamburger = document.querySelector('.hamburger');
+                if (menu && hamburger && !menu.contains(e.target) && !hamburger.contains(e.target)) {
+                    menu.classList.remove('open');
+                }
+            });
+
+            // Cerrar menú al hacer scroll
+            window.addEventListener('scroll', () => {
+                const menu = document.getElementById('mobileMenu');
+                if (menu) {
+                    menu.classList.remove('open');
+                }
+            });
+
+            console.log('Mobile menu initialized');
+        }
 
         async function initializeFirebase() {
             try {
