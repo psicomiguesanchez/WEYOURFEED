@@ -502,7 +502,27 @@
         </div>
     </div>
 
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <script>
+        let db;
+
+        // Inicializar Firebase
+        async function initFirebase() {
+            try {
+                const response = await fetch('/api/firebase-config');
+                const config = await response.json();
+                if (firebase.apps.length === 0) {
+                    firebase.initializeApp(config);
+                }
+                db = firebase.firestore();
+                console.log('✅ Firebase initialized');
+            } catch (error) {
+                console.error('❌ Firebase init failed:', error);
+            }
+        }
+        initFirebase();
+
         // Base de datos de carreras en Colombia
         const colombiaRaces = {
             'mmb-21k': {
@@ -749,9 +769,16 @@
             element.classList.add('selected');
         }
 
-        function generateStrategy() {
+        async function generateStrategy() {
+            if (!selectedStrategy) {
+                alert('Por favor selecciona una estrategia de carrera');
+                return;
+            }
+
             const hours = parseInt(document.getElementById('hours').value) || 1;
             const minutes = parseInt(document.getElementById('minutes').value) || 30;
+            const weight = parseInt(document.getElementById('weight').value) || 70;
+            const temperature = parseInt(document.getElementById('temperature').value) || 20;
             const totalMinutes = hours * 60 + minutes;
             const totalHours = totalMinutes / 60;
 
@@ -767,11 +794,11 @@
             document.getElementById('avgPace').textContent = `${paceMin}:${String(paceSec).padStart(2, '0')}/km`;
             document.getElementById('elevation').textContent = elevation.toFixed(0) + ' m';
 
-            // Generar tabla de parciales
+            // Generar tabla de parciales CON ESTRATEGIA
             generateSplits(distance, totalMinutes, selectedStrategy, elevation);
 
             // Generar plan de nutrición
-            generateNutrition(totalHours);
+            await generateNutrition(totalHours, distance, weight, temperature);
 
             // Gráfico de elevación
             drawElevationChart();
@@ -785,15 +812,37 @@
 
             for (let km = 1; km <= segments; km++) {
                 let pace = timePerKm;
+                let intensity = 'Moderado';
 
                 if (strategy === 'conservative') {
-                    // Ajustar por pendiente (simplificado)
-                    const slopeAdjustment = (elevation / distance) > 4 ? 0.1 : -0.05;
-                    pace += slopeAdjustment;
+                    // En subidas más lento, en bajadas más rápido
+                    const avgSlope = (elevation / distance);
+                    const currentSlope = avgSlope * (km / segments); // Aumenta con la distancia
+
+                    if (currentSlope > 5) {
+                        pace *= 1.25; // 25% más lento en subidas fuertes
+                        intensity = '🔴 Fuerte';
+                    } else if (currentSlope > 2) {
+                        pace *= 1.1; // 10% más lento
+                        intensity = '🟡 Subida';
+                    } else if (currentSlope < -2) {
+                        pace *= 0.85; // 15% más rápido en bajadas
+                        intensity = '🟢 Bajada';
+                    }
                 } else if (strategy === 'negative') {
                     // Más lento al inicio, más rápido al final
                     const progress = km / segments;
-                    pace = timePerKm * (1 + (1 - progress) * 0.15);
+                    pace = timePerKm * (1 + (1 - progress) * 0.2);
+
+                    if (progress < 0.33) {
+                        intensity = '🔵 Conservador';
+                    } else if (progress < 0.66) {
+                        intensity = '🟡 Moderado';
+                    } else {
+                        intensity = '🔴 Fuerte';
+                    }
+                } else if (strategy === 'constant') {
+                    intensity = '🟢 Constante';
                 }
 
                 accTime += pace;
@@ -808,6 +857,7 @@
                         <td>${(elevation / segments).toFixed(0)} m</td>
                         <td>${((elevation / segments) / 1).toFixed(1)}%</td>
                         <td>${Math.floor(pace)}:${String(Math.round((pace % 1) * 60)).padStart(2, '0')}</td>
+                        <td>${intensity}</td>
                         <td>${hours}:${String(mins).padStart(2, '0')}</td>
                         <td style="color: ${margin > 0 ? '#22C55E' : '#EF4444'};">${margin > 0 ? '+' : ''}${margin}</td>
                     </tr>
@@ -817,26 +867,115 @@
             document.getElementById('splitsTable').innerHTML = html;
         }
 
-        function generateNutrition(hours) {
-            let html = '';
-            const interval = 0.75; // Cada 45 minutos
+        async function generateNutrition(hours, distance, weight, temperature) {
+            try {
+                // CÁLCULO DE CARBOHIDRATOS
+                const carbsPerKm = 1.0; // Gramos por km
+                const totalCarbs = distance * carbsPerKm;
+                const carbsPerHour = totalCarbs / hours;
 
-            for (let h = 0.75; h <= hours; h += interval) {
-                const hour = Math.floor(h);
-                const min = Math.round((h % 1) * 60);
-                const geles = Math.ceil(h / 1.5);
+                // Ajustar por temperatura
+                const tempAdjustment = temperature > 25 ? 1.2 : (temperature < 10 ? 0.8 : 1.0);
+                const adjustedCarbsPerHour = carbsPerHour * tempAdjustment;
 
-                html += `
+                // CÁLCULO DE ELECTROLITOS
+                const sodiumPerHour = weight * 5; // 5mg por kg de peso
+
+                // CÁLCULO DE HIDRATACIÓN
+                let hydrationPerHour = 500; // Base
+                if (temperature > 25) hydrationPerHour = 750;
+                if (temperature > 30) hydrationPerHour = 1000;
+                if (temperature < 10) hydrationPerHour = 300;
+
+                // Mostrar tabla de nutrientes
+                document.getElementById('nutritionTable').innerHTML = `
                     <tr>
-                        <td>${hour}:${String(min).padStart(2, '0')}</td>
-                        <td>${geles} gel</td>
-                        <td>500 mg Na</td>
-                        <td>500 ml</td>
+                        <td>${Math.round(hours)}:00</td>
+                        <td>${adjustedCarbsPerHour.toFixed(0)}g</td>
+                        <td>${sodiumPerHour.toFixed(0)}mg</td>
+                        <td>${hydrationPerHour}ml</td>
+                    </tr>
+                    <tr style="background: rgba(255,102,0,0.1);">
+                        <td><strong>TOTAL</strong></td>
+                        <td><strong>${totalCarbs.toFixed(0)}g</strong></td>
+                        <td><strong>${(sodiumPerHour * hours).toFixed(0)}mg</strong></td>
+                        <td><strong>${(hydrationPerHour * hours).toFixed(0)}ml</strong></td>
                     </tr>
                 `;
-            }
 
-            document.getElementById('nutritionTable').innerHTML = html;
+                // BUSCAR PRODUCTOS QUE CUMPLAN LOS REQUERIMIENTOS
+                if (!db) {
+                    console.error('Firebase no está inicializado');
+                    return;
+                }
+
+                const productsSnap = await db.collection('productos').get();
+                const allProducts = productsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+                // Crear recomendación de productos
+                let recommendedProducts = [];
+
+                // Productos con carbohidratos
+                const carbProducts = allProducts.filter(p =>
+                    p.categoriaId && (
+                        p.categoriaId.toLowerCase().includes('carbo') ||
+                        p.categoriaId.toLowerCase().includes('gel') ||
+                        p.nombre.toLowerCase().includes('carbo')
+                    )
+                ).slice(0, 3);
+
+                // Productos con electrolitos
+                const electroProducts = allProducts.filter(p =>
+                    p.categoriaId && (
+                        p.categoriaId.toLowerCase().includes('electro') ||
+                        p.categoriaId.toLowerCase().includes('sales')
+                    )
+                ).slice(0, 2);
+
+                // Productos de hidratación
+                const hydroProducts = allProducts.filter(p =>
+                    p.categoriaId && (
+                        p.categoriaId.toLowerCase().includes('hidra') ||
+                        p.categoriaId.toLowerCase().includes('bebida')
+                    )
+                ).slice(0, 2);
+
+                recommendedProducts = [...new Set([...carbProducts, ...electroProducts, ...hydroProducts])];
+
+                // Mostrar productos recomendados
+                let productsHtml = '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem;">';
+
+                recommendedProducts.forEach(product => {
+                    const imgStyle = product.imagenBase64
+                        ? `<img src="${product.imagenBase64}" style="width: 100%; height: 150px; object-fit: contain; background: #000;">`
+                        : '<div style="width: 100%; height: 150px; background: #333; display: flex; align-items: center; justify-content: center;">Sin imagen</div>';
+
+                    productsHtml += `
+                        <div style="background: rgba(255,102,0,0.08); border: 1px solid rgba(255,102,0,0.2); border-radius: 12px; padding: 1rem; text-align: center;">
+                            ${imgStyle}
+                            <h4 style="color: #FF6600; margin: 0.75rem 0; font-size: 0.95rem;">${product.nombre}</h4>
+                            <p style="color: rgba(255,255,255,0.7); font-size: 0.85rem;">${product.categoriaId}</p>
+                            <p style="color: #FF6600; font-weight: 700; font-size: 1.2rem;">$${(product.precio || 0).toLocaleString('es-ES')}</p>
+                        </div>
+                    `;
+                });
+
+                productsHtml += '</div>';
+
+                // Inyectar antes de la tabla
+                const tableContainer = document.querySelector('.result-card:has(table)');
+                if (tableContainer) {
+                    const newDiv = document.createElement('div');
+                    newDiv.innerHTML = `
+                        <h3 style="color: #FF6600; margin-bottom: 1rem; margin-top: 2rem;">🛒 Productos Recomendados</h3>
+                        ${productsHtml}
+                    `;
+                    tableContainer.parentNode.insertBefore(newDiv, tableContainer);
+                }
+
+            } catch (error) {
+                console.error('Error generando nutrición:', error);
+            }
         }
 
         function drawElevationChart() {
