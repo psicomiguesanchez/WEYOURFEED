@@ -290,28 +290,61 @@
             <button class="back-btn" onclick="window.location.href='/'">← Volver</button>
         </div>
 
-        <!-- PASO 1: CARGAR GPX -->
+        <!-- PASO 1: CARGAR GPX O SELECCIONAR CARRERA -->
         <div class="step active" id="step1">
-            <h1 class="step-title">Paso 1 · Tu Recorrido</h1>
-            <p style="color: rgba(255,255,255,0.7); font-size: 1.1rem; margin-bottom: 2rem;">Sube el archivo GPX de tu carrera</p>
+            <h1 class="step-title">Paso 1 · Tu Carrera</h1>
+            <p style="color: rgba(255,255,255,0.7); font-size: 1.1rem; margin-bottom: 2rem;">Elige una carrera de Colombia o sube tu GPX</p>
 
             <div class="card">
+                <h2 style="color: #FF6600; margin-bottom: 1.5rem;">🇨🇴 Carreras Principales en Colombia</h2>
+                <label>Selecciona tu carrera:</label>
+                <select id="colombiaEvent" onchange="selectColombiaEvent(this.value)">
+                    <option value="">-- Elegir carrera --</option>
+                    <optgroup label="🏃 RUNNING">
+                        <option value="mmb-21k">Media Maratón Bogotá 21K (Bogotá, Julio)</option>
+                        <option value="mmb-10k">Media Maratón Bogotá 10K (Bogotá, Julio)</option>
+                        <option value="maraton-cali">Maratón de Cali (Cali, Enero)</option>
+                        <option value="media-cartagena">Media Maratón Cartagena (Cartagena, Abril)</option>
+                        <option value="trail-manizales">Trail Manizales 30K (Manizales, Octubre)</option>
+                    </optgroup>
+                    <optgroup label="🚴 CICLISMO">
+                        <option value="vuelta-colombia">Vuelta a Colombia 2026 (9 etapas, Agosto)</option>
+                        <option value="vuelta-femenina">Vuelta Colombia Femenina (7 etapas, Octubre)</option>
+                        <option value="tour-eje-cafetero">Tour del Eje Cafetero (4 días, Junio)</option>
+                        <option value="cicloturismo-tatacoa">Cicloturismo Desierto de la Tatacoa (120K, Mayo)</option>
+                    </optgroup>
+                    <optgroup label="🏊 TRIATLÓN">
+                        <option value="ironman-cartagena">IRONMAN 5150 Cartagena (Septiembre)</option>
+                        <option value="triatlon-huila">Triatlón Huila (Octubre)</option>
+                        <option value="triatlon-medellin">Triatlón Medellín (Noviembre)</option>
+                        <option value="triatlon-santa-marta">Triatlón Santa Marta (Marzo)</option>
+                    </optgroup>
+                </select>
+
+                <div id="eventInfo" style="display: none; margin-top: 2rem; background: rgba(255,102,0,0.1); padding: 1.5rem; border-radius: 12px;">
+                    <h3 style="color: #FF6600; margin-bottom: 1rem;" id="eventName">-</h3>
+                    <div class="metric" style="margin-bottom: 1rem;">
+                        <span class="metric-label">Distancia</span>
+                        <span class="metric-value" id="eventDistance">-</span>
+                    </div>
+                    <div class="metric" style="margin-bottom: 1rem;">
+                        <span class="metric-label">Elevación</span>
+                        <span class="metric-value" id="eventElevation">-</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Fecha</span>
+                        <span class="metric-value" id="eventDate" style="font-size: 1rem;">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2 style="color: #FF6600; margin-bottom: 1.5rem;">📤 O Carga tu Propio GPX</h2>
                 <div class="upload-area" id="uploadArea">
                     <div style="font-size: 3rem; margin-bottom: 1rem;">📤</div>
                     <p style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem;">Arrastra tu GPX aquí</p>
                     <p style="color: rgba(255,255,255,0.6);">o haz click para seleccionar</p>
                     <input type="file" id="gpxFile" accept=".gpx" style="display: none;">
-                </div>
-
-                <div style="margin-top: 2rem;">
-                    <label>O carga un evento predefinido:</label>
-                    <select id="predefinedEvent">
-                        <option value="">Seleccionar evento...</option>
-                        <option value="media">Media Maratón (21.1 km)</option>
-                        <option value="maraton">Maratón (42.2 km)</option>
-                        <option value="trail">Trail 30km</option>
-                        <option value="ultra">Ultra 50km</option>
-                    </select>
                 </div>
             </div>
 
@@ -470,8 +503,134 @@
     </div>
 
     <script>
+        // Base de datos de carreras en Colombia
+        const colombiaRaces = {
+            'mmb-21k': {
+                name: '🏃 Media Maratón Bogotá 21K',
+                type: 'running',
+                distance: 21.1,
+                elevation: 150,
+                date: 'Julio 26, 2026',
+                location: 'Bogotá, Cundinamarca',
+                altitude: 2600,
+                difficulty: 'Media',
+                description: 'La carrera más grande de América Latina con 40,000+ corredores. Recorrido plano con desafío de altitud.'
+            },
+            'mmb-10k': {
+                name: '🏃 Media Maratón Bogotá 10K',
+                type: 'running',
+                distance: 10,
+                elevation: 75,
+                date: 'Julio 26, 2026',
+                location: 'Bogotá, Cundinamarca',
+                altitude: 2600,
+                difficulty: 'Baja',
+                description: 'Carrera de 10K paralela al evento principal. Ideal para iniciarse.'
+            },
+            'maraton-cali': {
+                name: '🏃 Maratón de Cali',
+                type: 'running',
+                distance: 42.2,
+                elevation: 120,
+                date: 'Enero, 2026',
+                location: 'Cali, Valle del Cauca',
+                altitude: 1000,
+                difficulty: 'Media',
+                description: 'Clásica maratón con ambiente festivo en la salsa. Recorrido ondulado.'
+            },
+            'media-cartagena': {
+                name: '🏃 Media Maratón Cartagena',
+                type: 'running',
+                distance: 21.1,
+                elevation: 50,
+                date: 'Abril, 2026',
+                location: 'Cartagena, Bolívar',
+                altitude: 0,
+                difficulty: 'Baja',
+                description: 'Carrera junto al mar en clima tropical. Recorrido muy plano.'
+            },
+            'trail-manizales': {
+                name: '🏔️ Trail Manizales 30K',
+                type: 'running',
+                distance: 30,
+                elevation: 800,
+                date: 'Octubre, 2026',
+                location: 'Manizales, Caldas',
+                altitude: 2150,
+                difficulty: 'Alta',
+                description: 'Trail por el eje cafetero con montaña, paisajes de coffee triangle.'
+            },
+            'vuelta-colombia': {
+                name: '🚴 Vuelta a Colombia 2026',
+                type: 'cycling',
+                distance: 1473,
+                elevation: 25000,
+                date: 'Agosto 8-16, 2026',
+                location: 'Colombia (Huila, Tolima, Caldas, Antioquia)',
+                altitude: 2600,
+                difficulty: 'Muy Alta',
+                description: 'Vuelta ciclística profesional. 9 etapas. La más importante de América del Sur.'
+            },
+            'tour-eje-cafetero': {
+                name: '🚴 Tour Eje Cafetero',
+                type: 'cycling',
+                distance: 450,
+                elevation: 6000,
+                date: 'Junio, 2026',
+                location: 'Eje Cafetero (Caldas, Quindío, Risaralda)',
+                altitude: 1500,
+                difficulty: 'Alta',
+                description: '4 etapas por el corazón cafetalero colombiano.'
+            },
+            'cicloturismo-tatacoa': {
+                name: '🚴 Cicloturismo Desierto Tatacoa',
+                type: 'cycling',
+                distance: 120,
+                elevation: 800,
+                date: 'Mayo, 2026',
+                location: 'Desierto de la Tatacoa, Huila',
+                altitude: 400,
+                difficulty: 'Media',
+                description: 'Cicloturismo en paisaje desértico único de Colombia.'
+            },
+            'ironman-cartagena': {
+                name: '🏊 IRONMAN 5150 Cartagena',
+                type: 'triathlon',
+                distance: 113,
+                elevation: 50,
+                date: 'Septiembre, 2026',
+                location: 'Cartagena, Bolívar',
+                altitude: 0,
+                difficulty: 'Media',
+                description: 'Triatlón: 750m natación + 20km ciclismo + 5km running. En el mar.'
+            },
+            'triatlon-huila': {
+                name: '🏊 Triatlón Huila',
+                type: 'triathlon',
+                distance: 51.5,
+                elevation: 200,
+                date: 'Octubre 3, 2026',
+                location: 'Palermo, Huila',
+                altitude: 1200,
+                difficulty: 'Media',
+                description: 'Sprint triatlón en los Andes. Paisajes de montaña.'
+            },
+            'triatlon-medellin': {
+                name: '🏊 Triatlón Medellín',
+                type: 'triathlon',
+                distance: 51.5,
+                elevation: 150,
+                date: 'Noviembre, 2026',
+                location: 'Medellín, Antioquia',
+                altitude: 1500,
+                difficulty: 'Media',
+                description: 'Sprint triatlón en la Ciudad de la Innovación.'
+            }
+        };
+
         let gpxData = null;
         let selectedStrategy = null;
+        let selectedRace = null;
         let raceData = {
             distance: 0,
             elevation: 0,
@@ -550,6 +709,32 @@
                       Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
                       Math.sin(dLon/2) * Math.sin(dLon/2);
             return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        }
+
+        function selectColombiaEvent(eventId) {
+            if (!eventId) {
+                document.getElementById('eventInfo').style.display = 'none';
+                document.getElementById('nextBtn1').disabled = true;
+                return;
+            }
+
+            selectedRace = colombiaRaces[eventId];
+            raceData = {
+                distance: selectedRace.distance,
+                elevation: selectedRace.elevation,
+                segments: []
+            };
+
+            document.getElementById('eventName').textContent = selectedRace.name;
+            document.getElementById('eventDistance').textContent = selectedRace.distance + ' km';
+            document.getElementById('eventElevation').textContent = selectedRace.elevation + ' m';
+            document.getElementById('eventDate').textContent = selectedRace.date;
+            document.getElementById('eventInfo').style.display = 'block';
+            document.getElementById('nextBtn1').disabled = false;
+
+            // Actualizar info del paso 2
+            document.getElementById('distanceInfo').textContent = selectedRace.distance.toFixed(2);
+            document.getElementById('elevationInfo').textContent = selectedRace.elevation.toFixed(0);
         }
 
         function goToStep(step) {
