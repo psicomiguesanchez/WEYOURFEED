@@ -930,74 +930,12 @@
         let categories = [];
         let isLoading = false;
         let loadAttempts = 0;
-        let maxAttempts = 5;
+        let maxAttempts = 3;
         let retryTimeouts = [];
-        let logPanel = null;
-        let logs = [];
 
-        // Sistema de logging visual
-        function initLogPanel() {
-            const panel = document.createElement('div');
-            panel.id = 'logPanel';
-            panel.style.cssText = `
-                position: fixed;
-                bottom: 80px;
-                right: 10px;
-                width: 280px;
-                height: 250px;
-                background: rgba(0, 0, 0, 0.9);
-                border: 1px solid rgba(255, 102, 0, 0.5);
-                border-radius: 8px;
-                font-family: monospace;
-                font-size: 11px;
-                color: #0f0;
-                padding: 8px;
-                overflow-y: auto;
-                z-index: 999;
-                display: none;
-            `;
-            document.body.appendChild(panel);
-            logPanel = panel;
-
-            // Botón para mostrar/ocultar
-            const logBtn = document.createElement('button');
-            logBtn.innerHTML = '🔍 Logs';
-            logBtn.style.cssText = `
-                position: fixed;
-                bottom: 20px;
-                right: 10px;
-                padding: 8px 12px;
-                background: rgba(255, 102, 0, 0.3);
-                border: 1px solid rgba(255, 102, 0, 0.7);
-                color: #fff;
-                border-radius: 4px;
-                cursor: pointer;
-                z-index: 1000;
-                font-size: 12px;
-            `;
-            logBtn.onclick = () => {
-                logPanel.style.display = logPanel.style.display === 'none' ? 'block' : 'none';
-            };
-            document.body.appendChild(logBtn);
+        function log(msg) {
+            console.log(msg);
         }
-
-        function addLog(msg) {
-            const time = new Date().toLocaleTimeString();
-            const logMsg = `[${time}] ${msg}`;
-            logs.push(logMsg);
-            if (logPanel) {
-                logPanel.innerHTML = logs.slice(-20).join('<br>');
-                logPanel.scrollTop = logPanel.scrollHeight;
-            }
-            console.log(logMsg);
-        }
-
-        // Interceptar console.log
-        const originalLog = console.log;
-        console.log = function(...args) {
-            originalLog.apply(console, args);
-            addLog(args.join(' '));
-        };
 
         // Funciones del menú móvil
         function toggleMobileMenu() {
@@ -1069,13 +1007,13 @@
                 if (!response.ok) throw new Error(`Config failed: ${response.status}`);
                 const firebaseConfig = await response.json();
                 projectId = firebaseConfig.projectId;
-                addLog(`✅ Project ID: ${projectId}`);
+                log(`Project ID: ${projectId}`);
 
                 if (firebase.apps.length === 0) {
                     firebase.initializeApp(firebaseConfig);
                 }
                 db = firebase.firestore();
-                addLog('✅ Firebase initialized (CLIENT)');
+                log('Firebase initialized');
 
                 // Reintentar carga si falla
                 try {
@@ -1092,23 +1030,18 @@
 
         async function loadProducts(isRetry = false) {
             try {
-                if (isLoading && !isRetry) {
-                    addLog('⏳ Ya cargando...');
-                    return;
-                }
-
+                if (isLoading && !isRetry) return;
                 isLoading = true;
                 if (!isRetry) loadAttempts = 0;
                 loadAttempts++;
 
-                addLog(`📦 Intento #${loadAttempts} - Cargando productos...`);
+                log(`Cargando - Intento ${loadAttempts}`);
 
-                // Intentar REST API primero (más confiable en móvil)
+                // Usar REST API (sin caché, más confiable en móvil)
                 if (projectId) {
                     try {
-                        addLog('🌐 Usando REST API...');
                         const restUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/productos`;
-                        const restResp = await fetch(restUrl);
+                        const restResp = await fetch(restUrl, { cache: 'no-store' });
 
                         if (restResp.ok) {
                             const data = await restResp.json();
@@ -1127,98 +1060,74 @@
                                 };
                             });
 
-                            addLog(`✅ ${products.length} productos vía REST API`);
+                            log(`Cargados ${products.length} productos (REST)`);
 
-                            // Cargar categorías
+                            // Categorías
                             const catUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/categorias`;
-                            const catResp = await fetch(catUrl);
+                            const catResp = await fetch(catUrl, { cache: 'no-store' });
 
                             if (catResp.ok) {
                                 const catData = await catResp.json();
                                 categories = (catData.documents || []).map(doc => {
                                     const fields = doc.fields || {};
                                     const id = doc.name.split('/').pop();
-                                    return {
-                                        id,
-                                        nombre: fields.nombre?.stringValue || ''
-                                    };
+                                    return { id, nombre: fields.nombre?.stringValue || '' };
                                 });
-                                addLog(`✅ ${categories.length} categorías cargadas`);
+                                log(`Cargadas ${categories.length} categorías`);
                             }
 
                             // Renderizar
-                            renderProductsFromRest();
+                            const grid = document.getElementById('clientGrid');
+                            if (grid && products.length > 0) {
+                                renderProducts(products);
+                                updateCategoryFilter();
+                            } else {
+                                showEmptyState();
+                            }
+
                             loadAttempts = 0;
                             isLoading = false;
                             return;
                         }
-                    } catch (restError) {
-                        addLog(`⚠️ REST API falló: ${restError.message} - Intentando librería...`);
+                    } catch (e) {
+                        log(`REST falló: ${e.message}`);
                     }
                 }
 
-                // Fallback a librería de Firebase
+                // Fallback: Firebase SDK
                 if (!db) {
-                    addLog('❌ Firebase no inicializado');
                     if (loadAttempts < maxAttempts) {
-                        const delay = 500 * loadAttempts;
-                        const t = setTimeout(() => loadProducts(true), delay);
-                        retryTimeouts.push(t);
-                    } else {
-                        showNotification('No se puede conectar', 'error');
+                        setTimeout(() => loadProducts(true), 1000);
                     }
                     isLoading = false;
                     return;
                 }
 
-                const productsSnap = await db.collection('productos').get();
-                addLog(`📊 Snap size: ${productsSnap.size}`);
-
-                if (productsSnap.size === 0) {
-                    addLog('⚠️ No hay productos');
+                const pSnap = await db.collection('productos').get();
+                if (pSnap.size === 0) {
                     showEmptyState();
                     isLoading = false;
                     return;
                 }
 
-                products = productsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                addLog(`✅ ${products.length} productos cargados`);
+                products = pSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                log(`${products.length} productos (SDK)`);
 
-                const categoriesSnap = await db.collection('categorias').get();
-                categories = categoriesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                addLog(`✅ ${categories.length} categorías`);
+                const cSnap = await db.collection('categorias').get();
+                categories = cSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
                 renderProducts(products);
                 loadAttempts = 0;
                 isLoading = false;
 
             } catch (error) {
-                addLog(`❌ Error #${loadAttempts}: ${error.message}`);
+                log(`Error: ${error.message}`);
                 isLoading = false;
 
                 if (loadAttempts < maxAttempts) {
-                    const delay = 1000 * loadAttempts;
-                    addLog(`🔄 Reintentando en ${delay}ms...`);
-                    const t = setTimeout(() => loadProducts(true), delay);
-                    retryTimeouts.push(t);
-                } else {
-                    addLog('❌ Máximos reintentos alcanzados');
-                    showNotification('Error cargando. Recarga la página.', 'error');
+                    setTimeout(() => loadProducts(true), 1500);
                 }
             }
-        }
-
-        function renderProductsFromRest() {
-            const grid = document.getElementById('clientGrid');
-            if (!grid || products.length === 0) {
-                showEmptyState();
-                return;
-            }
-
-            addLog('🎨 Renderizando productos...');
-            renderProducts(products);
-            updateCategoryFilter();
-            addLog('✨ Renderizado completado');
         }
 
         function showEmptyState() {
@@ -1450,37 +1359,22 @@
             }
         }
 
-        // Inicializar panel de logs
-        initLogPanel();
-        addLog('Sistema de logs inicializado');
-
-        // Reintentar carga cuando la página se enfoca
+        // Reintentar cuando enfoca
         document.addEventListener('visibilitychange', () => {
             if (!document.hidden) {
-                addLog('👁️ Página enfocada - reintentando carga');
                 isLoading = false;
                 loadProducts();
             }
         });
 
-        // Inicializar cuando el DOM esté completamente listo
+        // Inicializar Firebase
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', () => {
-                addLog('📄 DOM Loaded - inicializando Firebase');
-                setTimeout(initializeFirebase, 500);
+                setTimeout(initializeFirebase, 300);
             });
         } else {
-            addLog('📄 DOM ya cargado - inicializando Firebase');
-            setTimeout(initializeFirebase, 500);
+            setTimeout(initializeFirebase, 300);
         }
-
-        // Reintentar cada 15 segundos si no hay productos
-        setInterval(() => {
-            if (products.length === 0 && !isLoading) {
-                addLog('🔄 Reintentando (sin productos después de 15s)');
-                loadProducts();
-            }
-        }, 15000);
     </script>
 </body>
 </html>
