@@ -924,8 +924,7 @@
         let db;
         let products = [];
         let categories = [];
-        let lastRequestTime = 0;
-        const REQUEST_THROTTLE_MS = 500;
+        let isLoading = false;
 
         // Funciones del menú móvil
         function toggleMobileMenu() {
@@ -1002,7 +1001,14 @@
                 }
                 db = firebase.firestore();
                 console.log('✅ Firebase initialized (CLIENT)');
-                loadProducts();
+
+                // Reintentar carga si falla
+                try {
+                    await loadProducts();
+                } catch (e) {
+                    console.error('Reintentando carga...', e);
+                    setTimeout(loadProducts, 1000);
+                }
             } catch (error) {
                 console.error('❌ Firebase init failed:', error);
                 showNotification('Error cargando catálogo', 'error');
@@ -1011,21 +1017,25 @@
 
         async function loadProducts() {
             try {
-                const now = Date.now();
-                if (now - lastRequestTime < REQUEST_THROTTLE_MS) return;
-                lastRequestTime = now;
+                if (isLoading) return;
+                isLoading = true;
 
+                console.log('📦 Cargando productos...');
                 const productsSnap = await db.collection('productos').get();
                 products = productsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                console.log(`✅ ${products.length} productos cargados`);
 
                 const categoriesSnap = await db.collection('categorias').get();
                 categories = categoriesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                console.log(`✅ ${categories.length} categorías cargadas`);
 
                 renderProducts(products);
                 updateCategoryFilter();
+                isLoading = false;
             } catch (error) {
                 console.error('❌ Load failed:', error);
                 showNotification('Error cargando productos', 'error');
+                isLoading = false;
             }
         }
 
