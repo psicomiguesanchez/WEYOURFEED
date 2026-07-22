@@ -1017,40 +1017,63 @@
 
         async function loadProducts() {
             try {
-                if (isLoading) return;
+                if (isLoading) {
+                    console.warn('⏳ Ya cargando...');
+                    return;
+                }
                 isLoading = true;
 
                 console.log('📦 Cargando productos...');
-                console.log('DB:', db);
 
                 if (!db) {
                     console.error('❌ Firebase DB no inicializado');
-                    showNotification('Firebase no inicializado', 'error');
                     isLoading = false;
+                    // Reintentar en 1 segundo
+                    setTimeout(() => {
+                        console.log('🔄 Reintentando carga de productos...');
+                        loadProducts();
+                    }, 1000);
                     return;
                 }
 
                 const productsSnap = await db.collection('productos').get();
-                console.log('Snap size:', productsSnap.size);
+                console.log('📊 Snap size:', productsSnap.size);
+
+                if (productsSnap.size === 0) {
+                    console.warn('⚠️ No hay productos en Firestore');
+                    document.getElementById('clientGrid').innerHTML = '<div style="grid-column: 1 / -1; text-align:center; padding:3rem;"><p style="color:rgba(255,255,255,0.5); font-size:1.1rem;">No hay productos disponibles</p></div>';
+                    isLoading = false;
+                    return;
+                }
+
                 products = productsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                console.log(`✅ ${products.length} productos cargados:`, products.slice(0, 3));
+                console.log(`✅ ${products.length} productos cargados`);
 
                 const categoriesSnap = await db.collection('categorias').get();
                 categories = categoriesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                console.log(`✅ ${categories.length} categorías cargadas:`, categories);
+                console.log(`✅ ${categories.length} categorías cargadas`);
 
-                if (products.length === 0) {
-                    console.warn('⚠️ No hay productos en Firestore');
+                // Verificar que se rendericen
+                const grid = document.getElementById('clientGrid');
+                if (grid) {
+                    renderProducts(products);
+                    updateCategoryFilter();
+                    console.log('✨ Productos renderizados exitosamente');
+                } else {
+                    console.error('❌ Grid no encontrado en DOM');
                 }
 
-                renderProducts(products);
-                updateCategoryFilter();
                 isLoading = false;
             } catch (error) {
-                console.error('❌ Load failed:', error);
-                console.error('Error details:', error.message, error.code);
-                showNotification('Error cargando productos: ' + error.message, 'error');
+                console.error('❌ Load error:', error.message);
                 isLoading = false;
+
+                // Reintentar en 2 segundos si hay error
+                setTimeout(() => {
+                    console.log('🔄 Reintentando carga después de error...');
+                    isLoading = false;
+                    loadProducts();
+                }, 2000);
             }
         }
 
