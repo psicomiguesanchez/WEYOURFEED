@@ -1045,20 +1045,23 @@
 
                         if (restResp.ok) {
                             const data = await restResp.json();
-                            let docsCount = (data.documents || []).length;
-                            log(`REST: ${docsCount} docs, token: ${data.nextPageToken ? 'sí' : 'no'}`);
-
                             let allDocs = (data.documents || []);
+                            let pageNum = 1;
+                            log(`Página ${pageNum}: ${allDocs.length} docs`);
 
-                            // Si hay nextPageToken, cargar más
-                            if (data.nextPageToken) {
-                                log('Cargando página 2...');
-                                const nextUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/productos?pageSize=100&pageToken=${encodeURIComponent(data.nextPageToken)}`;
+                            // Cargar todas las páginas
+                            let nextToken = data.nextPageToken;
+                            while (nextToken) {
+                                pageNum++;
+                                const nextUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/productos?pageSize=100&pageToken=${encodeURIComponent(nextToken)}`;
                                 const nextResp = await fetch(nextUrl, { cache: 'no-store' });
                                 if (nextResp.ok) {
                                     const nextData = await nextResp.json();
                                     allDocs = allDocs.concat(nextData.documents || []);
-                                    log(`Página 2: +${(nextData.documents || []).length}`);
+                                    log(`Página ${pageNum}: +${(nextData.documents || []).length}`);
+                                    nextToken = nextData.nextPageToken;
+                                } else {
+                                    break;
                                 }
                             }
 
@@ -1079,18 +1082,31 @@
 
                             log(`Cargados ${products.length} productos (REST)`);
 
-                            // Categorías
+                            // Categorías con paginación
                             const catUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/categorias?pageSize=100`;
                             const catResp = await fetch(catUrl, { cache: 'no-store' });
 
                             if (catResp.ok) {
                                 const catData = await catResp.json();
-                                categories = (catData.documents || []).map(doc => {
+                                let allCats = (catData.documents || []);
+                                let catToken = catData.nextPageToken;
+                                while (catToken) {
+                                    const nextCatUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/categorias?pageSize=100&pageToken=${encodeURIComponent(catToken)}`;
+                                    const nextCatResp = await fetch(nextCatUrl, { cache: 'no-store' });
+                                    if (nextCatResp.ok) {
+                                        const nextCatData = await nextCatResp.json();
+                                        allCats = allCats.concat(nextCatData.documents || []);
+                                        catToken = nextCatData.nextPageToken;
+                                    } else {
+                                        break;
+                                    }
+                                }
+                                categories = allCats.map(doc => {
                                     const fields = doc.fields || {};
                                     const id = doc.name.split('/').pop();
                                     return { id, nombre: fields.nombre?.stringValue || '' };
                                 });
-                                log(`Cargadas ${categories.length} categorías`);
+                                log(`${categories.length} categorías`);
                             }
 
                             // Renderizar
