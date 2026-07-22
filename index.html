@@ -1021,20 +1021,35 @@
                 isLoading = true;
 
                 console.log('📦 Cargando productos...');
+                console.log('DB:', db);
+
+                if (!db) {
+                    console.error('❌ Firebase DB no inicializado');
+                    showNotification('Firebase no inicializado', 'error');
+                    isLoading = false;
+                    return;
+                }
+
                 const productsSnap = await db.collection('productos').get();
+                console.log('Snap size:', productsSnap.size);
                 products = productsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                console.log(`✅ ${products.length} productos cargados`);
+                console.log(`✅ ${products.length} productos cargados:`, products.slice(0, 3));
 
                 const categoriesSnap = await db.collection('categorias').get();
                 categories = categoriesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                console.log(`✅ ${categories.length} categorías cargadas`);
+                console.log(`✅ ${categories.length} categorías cargadas:`, categories);
+
+                if (products.length === 0) {
+                    console.warn('⚠️ No hay productos en Firestore');
+                }
 
                 renderProducts(products);
                 updateCategoryFilter();
                 isLoading = false;
             } catch (error) {
                 console.error('❌ Load failed:', error);
-                showNotification('Error cargando productos', 'error');
+                console.error('Error details:', error.message, error.code);
+                showNotification('Error cargando productos: ' + error.message, 'error');
                 isLoading = false;
             }
         }
