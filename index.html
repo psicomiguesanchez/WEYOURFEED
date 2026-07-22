@@ -1262,7 +1262,33 @@
             }
         }
 
-        initializeFirebase();
+        // Reintentar carga cuando la página se enfoca
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                console.log('👁️ Página enfocada - reintentando carga');
+                isLoading = false;
+                loadProducts();
+            }
+        });
+
+        // Inicializar cuando el DOM esté completamente listo
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                console.log('📄 DOM Loaded - inicializando');
+                setTimeout(initializeFirebase, 500);
+            });
+        } else {
+            console.log('📄 DOM ya cargado - inicializando');
+            setTimeout(initializeFirebase, 500);
+        }
+
+        // Reintentar cada 15 segundos si no hay productos
+        setInterval(() => {
+            if (products.length === 0 && !isLoading) {
+                console.log('🔄 Reintentando (sin productos después de 15s)');
+                loadProducts();
+            }
+        }, 15000);
     </script>
 </body>
 </html>
