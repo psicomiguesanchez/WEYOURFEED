@@ -109,7 +109,11 @@
             <div id="products" class="page-content">
                 <div class="card">
                     <h3 style="color: #FF6600; margin-bottom: 1.5rem; font-size: 1.2rem;">📦 Productos</h3>
-                    <button class="btn" onclick="alert('Ir a la página de admin anterior para editar')">+ Nuevo Producto</button>
+                    <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+                        <button class="btn" onclick="descargarExcelProductos()" title="Descargar lista de productos para editar">📥 Descargar Excel</button>
+                        <button class="btn" onclick="document.getElementById('uploadExcelFile').click()" title="Subir Excel con cambios">📤 Cargar Excel</button>
+                        <input type="file" id="uploadExcelFile" accept=".xlsx,.xls,.csv" style="display: none;" onchange="cargarExcelProductos(event)">
+                    </div>
                     <div style="margin-top: 2rem; overflow-x: auto;">
                         <table>
                             <thead><tr><th>Nombre</th><th>Categoría</th><th>Precio</th><th>Acciones</th></tr></thead>
@@ -310,6 +314,129 @@
                 html += `<tr><td style="display:flex; align-items:center; gap:0.75rem;">${img}<span>${data.nombre}</span></td><td>${categoryName}</td><td>$${(data.precio || 0).toLocaleString('es-ES')}</td><td><button class="btn" style="padding: 0.5rem 1rem; font-size: 0.9rem;" onclick="openEditModal('${d.id}')"">Editar</button></td></tr>`;
             });
             document.getElementById('productsTable').innerHTML = html || '<tr><td colspan="4" style="text-align: center;">Sin productos</td></tr>';
+        }
+
+        // Descargar productos como Excel (CSV)
+        async function descargarExcelProductos() {
+            try {
+                const snap = await db.collection('productos').get();
+                const categoriesSnap = await db.collection('categorias').get();
+
+                const categoriesMap = {};
+                categoriesSnap.docs.forEach(doc => {
+                    categoriesMap[doc.id] = doc.data().nombre;
+                });
+
+                // Crear CSV
+                let csv = 'ID,Nombre,Categoría,Precio,Costo,Ganancia,Descripción\n';
+
+                snap.docs.forEach(d => {
+                    const data = d.data();
+                    const categoryName = categoriesMap[data.categoriaId] || data.categoriaId || '';
+                    const nombre = (data.nombre || '').replace(/"/g, '""');
+                    const descripcion = (data.descripcion || '').replace(/"/g, '""');
+
+                    csv += `"${d.id}","${nombre}","${categoryName}",${data.precio || 0},${data.costo || 0},${(data.precio || 0) - (data.costo || 0)},"${descripcion}"\n`;
+                });
+
+                // Descargar
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = 'productos_' + new Date().toISOString().split('T')[0] + '.csv';
+                link.click();
+
+                alert('✅ Excel descargado. Edita los datos y cárgalo nuevamente.');
+
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error descargando: ' + error.message);
+            }
+        }
+
+        // Cargar productos desde Excel (CSV)
+        async function cargarExcelProductos(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const csv = e.target.result;
+                    const lines = csv.split('\n').filter(l => l.trim());
+                    const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+
+                    let updated = 0;
+                    let errors = [];
+
+                    // Procesar cada fila
+                    for (let i = 1; i < lines.length; i++) {
+                        const values = parseCSVLine(lines[i]);
+                        if (values.length < 3) continue;
+
+                        const id = values[0].replace(/"/g, '').trim();
+                        const nombre = values[1].replace(/"/g, '').trim();
+                        const categoria = values[2].replace(/"/g, '').trim();
+                        const precio = parseInt(values[3]) || 0;
+                        const costo = parseInt(values[4]) || 0;
+                        const descripcion = values[6]?.replace(/"/g, '').trim() || '';
+
+                        if (!id) {
+                            errors.push(`Fila ${i + 1}: ID vacío`);
+                            continue;
+                        }
+
+                        try {
+                            // Actualizar en Firestore
+                            await db.collection('productos').doc(id).update({
+                                nombre,
+                                categoriaId: categoria,
+                                precio,
+                                costo,
+                                ganancia: precio - costo,
+                                descripcion
+                            });
+                            updated++;
+                        } catch (err) {
+                            errors.push(`Fila ${i + 1} (${id}): ${err.message}`);
+                        }
+                    }
+
+                    // Recargar
+                    await loadProducts();
+
+                    let msg = `✅ ${updated} productos actualizados`;
+                    if (errors.length > 0) {
+                        msg += `\n⚠️ ${errors.length} errores:\n` + errors.slice(0, 5).join('\n');
+                    }
+                    alert(msg);
+
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('Error procesando archivo: ' + error.message);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function parseCSVLine(line) {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) {
+                    result.push(current);
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            result.push(current);
+            return result;
         }
 
         async function loadCategoriesIntoSelect() {
