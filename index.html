@@ -772,6 +772,9 @@
 
             <!-- BOTONES DERECHOS -->
             <div style="display: flex; gap: 1rem; align-items: center;">
+                <button onclick="forceReload()" class="cart-button" title="Recargar productos" style="font-size: 1.3rem;">
+                    <span id="reloadIcon">🔄</span>
+                </button>
                 <button onclick="toggleCart()" class="cart-button">
                     <span>🛒</span>
                     <span id="cartCount" class="cart-badge">0</span>
@@ -925,6 +928,9 @@
         let products = [];
         let categories = [];
         let isLoading = false;
+        let loadAttempts = 0;
+        let maxAttempts = 5;
+        let retryTimeouts = [];
 
         // Funciones del menú móvil
         function toggleMobileMenu() {
@@ -1015,66 +1021,125 @@
             }
         }
 
-        async function loadProducts() {
+        async function loadProducts(isRetry = false) {
             try {
-                if (isLoading) {
+                if (isLoading && !isRetry) {
                     console.warn('⏳ Ya cargando...');
                     return;
                 }
+
                 isLoading = true;
+                if (!isRetry) loadAttempts = 0;
+                loadAttempts++;
 
-                console.log('📦 Cargando productos...');
+                console.log(`📦 Intento #${loadAttempts} - Cargando productos...`);
 
+                // Verificar Firebase
                 if (!db) {
-                    console.error('❌ Firebase DB no inicializado');
+                    console.error('❌ Firebase no inicializado en intento', loadAttempts);
+                    if (loadAttempts < maxAttempts) {
+                        const delay = 500 * loadAttempts;
+                        const t = setTimeout(() => loadProducts(true), delay);
+                        retryTimeouts.push(t);
+                    } else {
+                        showNotification('No se puede conectar a Firebase', 'error');
+                    }
                     isLoading = false;
-                    // Reintentar en 1 segundo
-                    setTimeout(() => {
-                        console.log('🔄 Reintentando carga de productos...');
-                        loadProducts();
-                    }, 1000);
                     return;
                 }
 
+                // Cargar productos
                 const productsSnap = await db.collection('productos').get();
-                console.log('📊 Snap size:', productsSnap.size);
+                console.log(`📊 Snap size: ${productsSnap.size}`);
 
                 if (productsSnap.size === 0) {
                     console.warn('⚠️ No hay productos en Firestore');
-                    document.getElementById('clientGrid').innerHTML = '<div style="grid-column: 1 / -1; text-align:center; padding:3rem;"><p style="color:rgba(255,255,255,0.5); font-size:1.1rem;">No hay productos disponibles</p></div>';
+                    showEmptyState();
                     isLoading = false;
                     return;
                 }
 
                 products = productsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                console.log(`✅ ${products.length} productos cargados`);
+                console.log(`✅ ${products.length} productos cargados exitosamente`);
 
+                // Cargar categorías
                 const categoriesSnap = await db.collection('categorias').get();
                 categories = categoriesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 console.log(`✅ ${categories.length} categorías cargadas`);
 
-                // Verificar que se rendericen
+                // Renderizar
                 const grid = document.getElementById('clientGrid');
-                if (grid) {
+                if (grid && products.length > 0) {
+                    console.log('🎨 Renderizando productos...');
                     renderProducts(products);
                     updateCategoryFilter();
-                    console.log('✨ Productos renderizados exitosamente');
+                    console.log('✨ Renderizado completado');
+                    loadAttempts = 0; // Reset en éxito
                 } else {
-                    console.error('❌ Grid no encontrado en DOM');
+                    console.error('❌ No se pudo renderizar - Grid:', !!grid, 'Productos:', products.length);
+                    showEmptyState();
                 }
 
                 isLoading = false;
+
             } catch (error) {
-                console.error('❌ Load error:', error.message);
+                console.error(`❌ Error en intento #${loadAttempts}:`, error.message);
                 isLoading = false;
 
-                // Reintentar en 2 segundos si hay error
-                setTimeout(() => {
-                    console.log('🔄 Reintentando carga después de error...');
-                    isLoading = false;
-                    loadProducts();
-                }, 2000);
+                if (loadAttempts < maxAttempts) {
+                    const delay = 1000 * loadAttempts;
+                    console.log(`🔄 Reintentando en ${delay}ms...`);
+                    const t = setTimeout(() => loadProducts(true), delay);
+                    retryTimeouts.push(t);
+                } else {
+                    console.error('❌ Máximos reintentos alcanzados');
+                    showNotification('Error cargando productos. Intenta recargar la página.', 'error');
+                }
             }
+        }
+
+        function showEmptyState() {
+            const grid = document.getElementById('clientGrid');
+            if (grid) {
+                grid.innerHTML = `<div style="grid-column: 1 / -1; text-align:center; padding:2rem;">
+                    <p style="color:rgba(255,255,255,0.5); font-size:1.1rem; margin-bottom:1rem;">No hay productos disponibles</p>
+                    <button onclick="forceReload()" style="padding:0.5rem 1rem; background:rgba(255,102,0,0.2); border:1px solid rgba(255,102,0,0.5); color:#fff; border-radius:0.5rem; cursor:pointer; transition:0.3s;">
+                        Recargar
+                    </button>
+                </div>`;
+            }
+        }
+
+        function forceReload() {
+            console.log('🔄 Recarga forzada solicitada');
+
+            // Animación del icono
+            const reloadIcon = document.getElementById('reloadIcon');
+            if (reloadIcon) {
+                reloadIcon.style.animation = 'spin 1s linear infinite';
+            }
+
+            // Limpiar todos los timeouts pendientes
+            retryTimeouts.forEach(t => clearTimeout(t));
+            retryTimeouts = [];
+
+            // Limpiar estado
+            products = [];
+            categories = [];
+            isLoading = false;
+            loadAttempts = 0;
+            selectedCategory = 'todos';
+
+            // Recargar
+            const grid = document.getElementById('clientGrid');
+            if (grid) grid.innerHTML = '<p style="text-align:center; padding:2rem; color:rgba(255,255,255,0.5);">Cargando...</p>';
+
+            // Ejecutar carga
+            loadProducts().finally(() => {
+                if (reloadIcon) {
+                    reloadIcon.style.animation = 'none';
+                }
+            });
         }
 
         function renderProducts(filtered) {
