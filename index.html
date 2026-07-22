@@ -1045,7 +1045,24 @@
 
                         if (restResp.ok) {
                             const data = await restResp.json();
-                            products = (data.documents || []).map(doc => {
+                            let docsCount = (data.documents || []).length;
+                            log(`REST: ${docsCount} docs, token: ${data.nextPageToken ? 'sí' : 'no'}`);
+
+                            let allDocs = (data.documents || []);
+
+                            // Si hay nextPageToken, cargar más
+                            if (data.nextPageToken) {
+                                log('Cargando página 2...');
+                                const nextUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/productos?pageSize=100&pageToken=${encodeURIComponent(data.nextPageToken)}`;
+                                const nextResp = await fetch(nextUrl, { cache: 'no-store' });
+                                if (nextResp.ok) {
+                                    const nextData = await nextResp.json();
+                                    allDocs = allDocs.concat(nextData.documents || []);
+                                    log(`Página 2: +${(nextData.documents || []).length}`);
+                                }
+                            }
+
+                            products = allDocs.map(doc => {
                                 const fields = doc.fields || {};
                                 const id = doc.name.split('/').pop();
                                 return {
