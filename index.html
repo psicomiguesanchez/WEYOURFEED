@@ -775,6 +775,9 @@
                 <button onclick="forceReload()" class="cart-button" title="Recargar productos" style="font-size: 1.3rem;">
                     <span id="reloadIcon">🔄</span>
                 </button>
+                <a href="/admin.html" class="cart-button" title="Panel de Administración" style="text-decoration: none; font-size: 1.3rem;">
+                    ⚙️
+                </a>
                 <button onclick="toggleCart()" class="cart-button">
                     <span>🛒</span>
                     <span id="cartCount" class="cart-badge">0</span>
@@ -1065,18 +1068,24 @@
                                 }
                             }
 
-                            products = allDocs.map(doc => {
+                            products = allDocs.map((doc, idx) => {
                                 const fields = doc.fields || {};
                                 const id = doc.name.split('/').pop();
+
+                                // Debug: mostrar campos del primer doc
+                                if (idx === 0) {
+                                    log('Campos disponibles: ' + Object.keys(fields).join(', '));
+                                }
+
                                 return {
                                     id,
-                                    nombre: fields.nombre?.stringValue || '',
-                                    precio: fields.precio?.integerValue || fields.precio?.doubleValue || 0,
-                                    categoriaId: fields.categoriaId?.stringValue || '',
-                                    imagenBase64: fields.imagenBase64?.stringValue || '',
-                                    descripcion: fields.descripcion?.stringValue || '',
-                                    costo: fields.costo?.integerValue || fields.costo?.doubleValue || 0,
-                                    ganancia: fields.ganancia?.integerValue || fields.ganancia?.doubleValue || 0,
+                                    nombre: fields.nombre?.stringValue || fields.nombre || '',
+                                    precio: fields.precio?.integerValue || fields.precio?.doubleValue || fields.precio || 0,
+                                    categoriaId: fields.categoriaId?.stringValue || fields.categoriaId || '',
+                                    imagenBase64: fields.imagenBase64?.stringValue || fields.imagenBase64 || '',
+                                    descripcion: fields.descripcion?.stringValue || fields.descripcion || '',
+                                    costo: fields.costo?.integerValue || fields.costo?.doubleValue || fields.costo || 0,
+                                    ganancia: fields.ganancia?.integerValue || fields.ganancia?.doubleValue || fields.ganancia || 0,
                                 };
                             });
 
