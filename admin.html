@@ -51,7 +51,52 @@
     </style>
 </head>
 <body>
-    <div class="admin-layout">
+    <!-- MODAL DE LOGIN -->
+    <div id="loginModal" style="display: flex; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 9999; align-items: center; justify-content: center;">
+        <div style="background: rgba(20, 20, 32, 0.98); border: 2px solid rgba(255, 102, 0, 0.3); border-radius: 16px; padding: 2rem; max-width: 400px; width: 90%;">
+            <h1 style="color: #FF6600; text-align: center; margin-bottom: 1.5rem; font-family: 'Oswald', sans-serif;">ADMIN WEYOURFEED</h1>
+
+            <!-- PESTAÑAS -->
+            <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
+                <button onclick="switchAuthTab('login')" id="loginTab" class="btn" style="flex: 1; background: linear-gradient(135deg, #FF6600 0%, #FF8800 100%);">Ingresar</button>
+                <button onclick="switchAuthTab('register')" id="registerTab" class="btn" style="flex: 1; background: rgba(255, 102, 0, 0.2); border: 1px solid rgba(255, 102, 0, 0.5);">Registrarse</button>
+            </div>
+
+            <!-- FORMULARIO LOGIN -->
+            <div id="loginForm" style="display: block;">
+                <div style="margin-bottom: 1rem;">
+                    <label style="color: #FF6600; display: block; margin-bottom: 0.5rem; font-weight: 600;">Email</label>
+                    <input type="email" id="loginEmail" placeholder="tu@email.com" style="width: 100%; padding: 0.75rem; background: rgba(30, 30, 45, 0.9); border: 1px solid rgba(255,102,0,0.3); border-radius: 8px; color: #FFF; font-size: 1rem;">
+                </div>
+                <div style="margin-bottom: 1.5rem;">
+                    <label style="color: #FF6600; display: block; margin-bottom: 0.5rem; font-weight: 600;">Contraseña</label>
+                    <input type="password" id="loginPassword" placeholder="••••••••" style="width: 100%; padding: 0.75rem; background: rgba(30, 30, 45, 0.9); border: 1px solid rgba(255,102,0,0.3); border-radius: 8px; color: #FFF; font-size: 1rem;">
+                </div>
+                <button onclick="handleLogin()" class="btn" style="width: 100%; padding: 1rem; background: linear-gradient(135deg, #FF6600 0%, #FF8800 100%); font-weight: 700;">Ingresar</button>
+                <div id="loginError" style="color: #ff6b6b; margin-top: 1rem; text-align: center; font-size: 0.9rem;"></div>
+            </div>
+
+            <!-- FORMULARIO REGISTRO -->
+            <div id="registerForm" style="display: none;">
+                <div style="margin-bottom: 1rem;">
+                    <label style="color: #FF6600; display: block; margin-bottom: 0.5rem; font-weight: 600;">Email</label>
+                    <input type="email" id="registerEmail" placeholder="tu@email.com" style="width: 100%; padding: 0.75rem; background: rgba(30, 30, 45, 0.9); border: 1px solid rgba(255,102,0,0.3); border-radius: 8px; color: #FFF; font-size: 1rem;">
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <label style="color: #FF6600; display: block; margin-bottom: 0.5rem; font-weight: 600;">Contraseña</label>
+                    <input type="password" id="registerPassword" placeholder="••••••••" style="width: 100%; padding: 0.75rem; background: rgba(30, 30, 45, 0.9); border: 1px solid rgba(255,102,0,0.3); border-radius: 8px; color: #FFF; font-size: 1rem;">
+                </div>
+                <div style="margin-bottom: 1.5rem;">
+                    <label style="color: #FF6600; display: block; margin-bottom: 0.5rem; font-weight: 600;">Confirmar Contraseña</label>
+                    <input type="password" id="registerPasswordConfirm" placeholder="••••••••" style="width: 100%; padding: 0.75rem; background: rgba(30, 30, 45, 0.9); border: 1px solid rgba(255,102,0,0.3); border-radius: 8px; color: #FFF; font-size: 1rem;">
+                </div>
+                <button onclick="handleRegister()" class="btn" style="width: 100%; padding: 1rem; background: linear-gradient(135deg, #FF6600 0%, #FF8800 100%); font-weight: 700;">Crear Cuenta</button>
+                <div id="registerError" style="color: #ff6b6b; margin-top: 1rem; text-align: center; font-size: 0.9rem;"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="mainContent" class="admin-layout" style="display: none;">
         <aside class="sidebar">
             <div class="sidebar-logo">🏠 ADMIN</div>
             <ul class="sidebar-menu">
@@ -172,6 +217,7 @@
             </div>
         </main>
     </div>
+    </div>
 
     <!-- MODAL EDITAR CATEGORÍA -->
     <div id="categoryModal" class="modal">
@@ -249,14 +295,16 @@
             firebase.auth().onAuthStateChanged(user => {
                 if (user) {
                     console.log('✅ Autenticado:', user.email, 'UID:', user.uid);
+                    document.getElementById('loginModal').style.display = 'none';
+                    document.getElementById('mainContent').style.display = 'grid';
                     loadDashboard();
                     loadProducts();
                     loadOrders();
                     loadClients();
                 } else {
                     console.log('❌ No autenticado');
-                    alert('⚠️ No estás autenticado. Redirigiendo a login...');
-                    window.location.href = '/';
+                    document.getElementById('loginModal').style.display = 'flex';
+                    document.getElementById('mainContent').style.display = 'none';
                 }
             });
         }
@@ -664,6 +712,93 @@
                 loadCategories();
             } catch (err) {
                 alert('❌ Error: ' + err.message);
+            }
+        }
+
+        // Funciones de autenticación
+        function switchAuthTab(tab) {
+            const loginForm = document.getElementById('loginForm');
+            const registerForm = document.getElementById('registerForm');
+            const loginTab = document.getElementById('loginTab');
+            const registerTab = document.getElementById('registerTab');
+
+            if (tab === 'login') {
+                loginForm.style.display = 'block';
+                registerForm.style.display = 'none';
+                loginTab.style.background = 'linear-gradient(135deg, #FF6600 0%, #FF8800 100%)';
+                registerTab.style.background = 'rgba(255, 102, 0, 0.2)';
+                registerTab.style.border = '1px solid rgba(255, 102, 0, 0.5)';
+            } else {
+                loginForm.style.display = 'none';
+                registerForm.style.display = 'block';
+                loginTab.style.background = 'rgba(255, 102, 0, 0.2)';
+                loginTab.style.border = '1px solid rgba(255, 102, 0, 0.5)';
+                registerTab.style.background = 'linear-gradient(135deg, #FF6600 0%, #FF8800 100%)';
+            }
+        }
+
+        async function handleLogin() {
+            const email = document.getElementById('loginEmail').value.trim();
+            const password = document.getElementById('loginPassword').value;
+            const errorDiv = document.getElementById('loginError');
+
+            errorDiv.textContent = '';
+
+            if (!email || !password) {
+                errorDiv.textContent = '⚠️ Completa email y contraseña';
+                return;
+            }
+
+            try {
+                await firebase.auth().signInWithEmailAndPassword(email, password);
+                console.log('✅ Ingreso exitoso');
+            } catch (error) {
+                console.error('Error:', error.message);
+                if (error.code === 'auth/user-not-found') {
+                    errorDiv.textContent = '❌ Usuario no existe. Regístrate primero.';
+                } else if (error.code === 'auth/wrong-password') {
+                    errorDiv.textContent = '❌ Contraseña incorrecta';
+                } else {
+                    errorDiv.textContent = '❌ ' + error.message;
+                }
+            }
+        }
+
+        async function handleRegister() {
+            const email = document.getElementById('registerEmail').value.trim();
+            const password = document.getElementById('registerPassword').value;
+            const passwordConfirm = document.getElementById('registerPasswordConfirm').value;
+            const errorDiv = document.getElementById('registerError');
+
+            errorDiv.textContent = '';
+
+            if (!email || !password || !passwordConfirm) {
+                errorDiv.textContent = '⚠️ Completa todos los campos';
+                return;
+            }
+
+            if (password !== passwordConfirm) {
+                errorDiv.textContent = '❌ Las contraseñas no coinciden';
+                return;
+            }
+
+            if (password.length < 6) {
+                errorDiv.textContent = '❌ La contraseña debe tener al menos 6 caracteres';
+                return;
+            }
+
+            try {
+                await firebase.auth().createUserWithEmailAndPassword(email, password);
+                console.log('✅ Cuenta creada exitosamente');
+            } catch (error) {
+                console.error('Error:', error.message);
+                if (error.code === 'auth/email-already-in-use') {
+                    errorDiv.textContent = '❌ Este email ya está registrado';
+                } else if (error.code === 'auth/invalid-email') {
+                    errorDiv.textContent = '❌ Email inválido';
+                } else {
+                    errorDiv.textContent = '❌ ' + error.message;
+                }
             }
         }
 
